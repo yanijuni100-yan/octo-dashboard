@@ -5,37 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Octo Browser Dashboard</title>
 <link rel="stylesheet" href="styles.css" />
-<link rel="stylesheet" href="auth.css" />
 </head>
-<body class="auth-locked">
-
-<!-- ===== Gerbang login (Supabase Auth) ===== -->
-<div id="auth-overlay">
-  <form class="auth-card" id="authForm" autocomplete="on">
-    <div class="auth-brand">
-      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <defs><linearGradient id="octoAuth" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b7dff"/><stop offset="100%" stop-color="#1633b8"/></linearGradient></defs>
-        <g fill="url(#octoAuth)"><circle cx="11" cy="34" r="4"/><circle cx="19" cy="36.5" r="4"/><circle cx="29" cy="36.5" r="4"/><circle cx="37" cy="34" r="4"/></g>
-        <path d="M24 7 C34 7 41 14 41 25 L41 31 C41 33 7 33 7 31 L7 25 C7 14 14 7 24 7Z" fill="url(#octoAuth)"/>
-        <ellipse cx="18.5" cy="21" rx="5" ry="5.5" fill="#fff"/><ellipse cx="29.5" cy="21" rx="5" ry="5.5" fill="#fff"/>
-        <circle cx="19.5" cy="22" r="2.5" fill="#10205c"/><circle cx="28.5" cy="22" r="2.5" fill="#10205c"/>
-      </svg>
-      <strong><span class="oc-accent">octo</span> dashboard</strong>
-    </div>
-    <h1>Masuk</h1>
-    <p class="auth-sub">Login dulu untuk membuka dashboard.</p>
-    <div class="auth-field">
-      <label for="authEmail">Email</label>
-      <input type="email" id="authEmail" name="email" autocomplete="username" placeholder="nama@email.com" required />
-    </div>
-    <div class="auth-field">
-      <label for="authPassword">Password</label>
-      <input type="password" id="authPassword" name="password" autocomplete="current-password" placeholder="••••••••" required />
-    </div>
-    <button type="submit" class="auth-btn" id="authSubmit">Masuk</button>
-    <div class="auth-msg info" id="authMsg"></div>
-  </form>
-</div>
+<body>
 <div class="bg-orbs" aria-hidden="true">
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
@@ -420,10 +391,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<!-- Supabase: vendor lib + konfigurasi + gerbang login (urutan wajib sebelum app.js) -->
-<script src="vendor/supabase.js"></script>
-<script src="supabase-config.js"></script>
-<script src="auth.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

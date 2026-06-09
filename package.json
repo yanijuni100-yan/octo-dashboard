@@ -17,13 +17,9 @@
     "files": [
       "index.html",
       "styles.css",
-      "auth.css",
       "app.js",
-      "auth.js",
-      "supabase-config.js",
       "electron-main.js",
-      "electron-preload.js",
-      "vendor/**/*"
+      "electron-preload.js"
     ],
     "win": {
       "target": "nsis"
@@ -38,7 +34,6 @@
     }
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.108.0",
     "electron": "^32.2.7",
     "electron-builder": "^26.15.2"
   }
