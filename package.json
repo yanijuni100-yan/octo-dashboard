@@ -3,10 +3,43 @@
   "version": "1.0.0",
   "description": "Dashboard pengelola akun (versi aplikasi desktop)",
   "main": "electron-main.js",
+  "author": "Octo Dashboard",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.octodashboard.app",
+    "productName": "Octo Dashboard",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "styles.css",
+      "auth.css",
+      "app.js",
+      "auth.js",
+      "supabase-config.js",
+      "electron-main.js",
+      "electron-preload.js",
+      "vendor/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Octo Dashboard"
+    }
   },
   "devDependencies": {
-    "electron": "^32.2.7"
+    "@supabase/supabase-js": "^2.108.0",
+    "electron": "^32.2.7",
+    "electron-builder": "^26.15.2"
   }
 }
