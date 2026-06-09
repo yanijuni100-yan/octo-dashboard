@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+*.log
+.git
+electron-main.js
+electron-preload.js
+*.bat

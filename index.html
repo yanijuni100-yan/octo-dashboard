@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Octo Browser Dashboard</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="octo" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#3b7dff"/>
+              <stop offset="100%" stop-color="#1633b8"/>
+            </linearGradient>
+          </defs>
+          <g fill="url(#octo)">
+            <circle cx="11" cy="34" r="4"/><circle cx="19" cy="36.5" r="4"/>
+            <circle cx="29" cy="36.5" r="4"/><circle cx="37" cy="34" r="4"/>
+          </g>
+          <path d="M24 7 C34 7 41 14 41 25 L41 31 C41 33 7 33 7 31 L7 25 C7 14 14 7 24 7Z" fill="url(#octo)"/>
+          <ellipse cx="18.5" cy="21" rx="5" ry="5.5" fill="#fff"/>
+          <ellipse cx="29.5" cy="21" rx="5" ry="5.5" fill="#fff"/>
+          <circle cx="19.5" cy="22" r="2.5" fill="#10205c"/>
+          <circle cx="28.5" cy="22" r="2.5" fill="#10205c"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <strong><span class="oc-accent">octo</span> browser</strong>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-label">Menu</div>
+      <button class="nav-item active" data-view="overview">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="lbl">Ringkasan</span>
+      </button>
+      <button class="nav-item" data-view="profiles">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="lbl">Profil</span>
+      </button>
+      <button class="nav-item" data-view="proxies">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h13l-4-4"/><path d="M21 16H8l4 4"/></svg>
+        <span class="lbl">Proxy</span>
+      </button>
+      <button class="nav-item" data-view="automation">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 2 13 10 21 10"/><path d="M21 14V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8"/><circle cx="17" cy="18" r="3"/></svg>
+        <span class="lbl">Otomatisasi</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span class="lbl">Pengaturan</span>
+      </button>
+    </nav>
+    <div class="sidebar-extras">
+      <div class="side-card">
+        <div class="side-card-head"><span class="dot-live"></span> Akun Aktif</div>
+        <div class="side-active-num"><span id="sideActiveNum">0</span><span class="slash">/</span><span id="sideTotalNum">0</span></div>
+        <div class="side-card-sub" id="sideActiveSub">Tidak ada yang dibuka</div>
+      </div>
+      <div class="side-card">
+        <div class="side-card-head">⚡ Aksi Cepat</div>
+        <button class="side-act-btn side-act-primary" id="sideOpen5">🌐 Buka 4 teratas</button>
+      </div>
+      <div class="side-card">
+        <div class="side-card-head">📊 Distribusi</div>
+        <div class="side-dist-lbl">Group</div>
+        <div id="sideDistGroup" class="side-dist-bars"></div>
+        <div class="side-dist-lbl">Brand</div>
+        <div id="sideDistBrand" class="side-dist-bars"></div>
+      </div>
+    </div>
+    <div class="sidebar-foot">
+      <div class="side-stat">
+        <div class="side-stat-num" id="sideCount">0</div>
+        <div class="side-stat-lbl">Akun tersimpan</div>
+      </div>
+      <div class="conn" id="connBadge"><span class="dot"></span><span id="connText">Mode Dummy</span></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="viewTitle">Ringkasan</h1>
+        <p id="viewSub" class="muted">Pantauan cepat seluruh profil Anda</p>
+      </div>
+      <div class="topbar-actions">
+        <label class="switch" title="Sumber data">
+          <input type="checkbox" id="liveToggle" />
+          <span class="track"></span>
+          <span class="switch-label">Live API</span>
+        </label>
+        <button class="btn" id="refreshBtn">↻ Segarkan</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice hidden"></div>
+
+    <!-- ===== Overview ===== -->
+    <section class="view" id="view-overview">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-ic" style="background:linear-gradient(135deg,rgba(124,108,242,.4),rgba(124,108,242,.1));color:#a29bfe;box-shadow:0 6px 18px rgba(124,108,242,.22),inset 0 1px 0 rgba(255,255,255,.08)">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8 5 8-5"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+          </div>
+          <div><div class="stat-num" id="stTotal">0</div><div class="stat-lbl">Akun Gmail</div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-ic" style="background:linear-gradient(135deg,rgba(253,203,110,.4),rgba(253,203,110,.1));color:#ffd479;box-shadow:0 6px 18px rgba(253,203,110,.22),inset 0 1px 0 rgba(255,255,255,.08)">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/></svg>
+          </div>
+          <div><div class="stat-num" id="stTags">0</div><div class="stat-lbl">Sudah Masuk</div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-ic" style="background:linear-gradient(135deg,rgba(124,108,242,.4),rgba(91,141,239,.1));color:#c8b6ff;box-shadow:0 6px 18px rgba(124,108,242,.22),inset 0 1px 0 rgba(255,255,255,.08)">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+          </div>
+          <div><div class="stat-num" id="stWithPw">0</div><div class="stat-lbl">Brand Aktif</div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-ic" style="background:linear-gradient(135deg,rgba(255,107,129,.4),rgba(255,107,129,.1));color:#ff9faf;box-shadow:0 6px 18px rgba(255,107,129,.22),inset 0 1px 0 rgba(255,255,255,.08)">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </div>
+          <div><div class="stat-num" id="stToday">0</div><div class="stat-lbl">Aktif Hari Ini</div></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="col-stack">
+          <div class="card">
+            <div class="card-head"><h3>Sebaran Group</h3></div>
+            <div id="tagChart" class="bars"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Aktivitas Terbaru</h3></div>
+          <ul id="activity" class="activity"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Profiles ===== -->
+    <section class="view hidden" id="view-profiles">
+      <div class="gmail-card" id="bulkGmailCard">
+        <span class="g-ic">
+          <svg viewBox="0 0 52 40" width="22" height="17" aria-hidden="true">
+            <path fill="#4285F4" d="M3.5 40h9V18L0 8v28.5C0 38 1.6 40 3.5 40z"/>
+            <path fill="#34A853" d="M39.5 40h9c2 0 3.5-1.6 3.5-3.5V8l-12.5 10z"/>
+            <path fill="#FBBC04" d="M39.5 3.5V18L52 8V5.3c0-4.9-5.6-7.7-9.5-4.8z"/>
+            <path fill="#EA4335" d="M12.5 18V3.5L26 13.6 39.5 3.5V18L26 28z"/>
+            <path fill="#C5221F" d="M0 5.3V8l12.5 10V3.5L9.5.5C5.6-2.4 0 .4 0 5.3z"/>
+          </svg>
+        </span>
+        <strong>Bulk Add Gmail</strong>
+        <button class="gmail-plus" id="bulkGmailBtn" title="Tambah akun Gmail massal">+</button>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="search" class="input" placeholder="Cari nama profil…" />
+        <select id="filterTag" class="input"></select>
+        <select id="filterStatus" class="input">
+          <option value="">Semua status</option>
+          <option value="active">Aktif</option>
+          <option value="stopped">Berhenti</option>
+        </select>
+        <span id="profileCount" class="count-badge">0 akun</span>
+        <button class="btn primary" id="newProfileBtn">+ Profil Baru</button>
+      </div>
+      <div class="bulkbar hidden" id="bulkbar">
+        <span id="bulkCount">0 dipilih</span>
+        <button class="btn small primary" id="bulkOpenAll">↗ Buka semua</button>
+        <button class="btn small bulk-group" id="bulkSetGroup" title="Set Group untuk semua yang dicentang">🏷 Set Group</button>
+        <button class="btn small bulk-brand" id="bulkSetBrand" title="Set Brand untuk semua yang dicentang">⭐ Set Brand</button>
+        <button class="btn small danger" id="bulkDelete">🗑 Hapus</button>
+        <button class="btn small" id="bulkClear" title="Hapus semua ceklis">✕ Batal pilih</button>
+      </div>
+      <div class="card no-pad">
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="chk"><input type="checkbox" id="checkAll" /></th>
+              <th class="sortable" data-sort="title">Profil <span class="sort-ind"></span></th>
+              <th>Status</th>
+              <th>OS</th>
+              <th>Proxy</th>
+              <th class="sortable" data-sort="group">Group <span class="sort-ind"></span></th>
+              <th class="sortable" data-sort="brand">Brand <span class="sort-ind"></span></th>
+              <th>Status</th>
+              <th class="sortable" data-sort="usage">Pengguna <span class="sort-ind"></span></th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="profileRows"></tbody>
+        </table>
+        <div id="emptyProfiles" class="empty hidden">Tidak ada profil yang cocok.</div>
+      </div>
+      <section class="iframe-view hidden" id="iframeView">
+        <aside class="if-side">
+          <div class="if-side-head">Akun</div>
+          <input type="search" id="ifSearch" class="if-search" placeholder="Cari email / brand / group…" />
+          <div class="if-filters" id="ifFilters"></div>
+          <div class="if-list" id="ifList"></div>
+        </aside>
+        <div class="if-main">
+          <div class="iframe-head">
+            <span id="iframeTitle">Memuat…</span>
+            <input type="text" id="iframeURL" class="if-url" placeholder="URL…" spellcheck="false" />
+            <div class="zoom-ctrl">
+              <button class="zoom-btn" id="zoomOut" title="Perkecil">−</button>
+              <span class="zoom-label" id="zoomLabel">100%</span>
+              <button class="zoom-btn" id="zoomIn" title="Perbesar">+</button>
+            </div>
+            <button class="btn small gmail-btn" id="iframeGmail" title="Buka Gmail">✉ Gmail</button>
+            <button class="btn small gsc-btn" id="iframeGSC" title="Buka Search Console">Go to GSC</button>
+            <button class="btn small dis-btn" id="iframeDisavow" title="Buka Disavow Links">Go to Disavow</button>
+            <a id="iframeOpenTab" target="_blank" rel="noopener" class="btn small">↗ Buka di tab terpisah</a>
+            <button class="btn small" id="iframeClose">✕ Tutup</button>
+          </div>
+          <div class="iframe-wrap">
+            <iframe id="iframeBox" referrerpolicy="no-referrer" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+            <div id="gridWrap" class="grid-wrap hidden"></div>
+          </div>
+          <div class="iframe-note">Klik akun lain di panel kiri untuk berpindah tanpa menutup jendela.</div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ===== Proxies ===== -->
+    <section class="view hidden" id="view-proxies">
+      <div class="card no-pad">
+        <table class="table">
+          <thead><tr><th>Proxy</th><th>Tipe</th><th>Host : Port</th><th>Dipakai</th><th>Status</th></tr></thead>
+          <tbody id="proxyRows"></tbody>
+        </table>
+        <div id="emptyProxies" class="empty hidden">Belum ada proxy.</div>
+      </div>
+    </section>
+
+    <!-- ===== Automation ===== -->
+    <section class="view hidden" id="view-automation">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h3>Aksi Massal</h3></div>
+          <p class="muted">Jalankan beberapa profil sekaligus untuk pemanasan akun atau pengujian.</p>
+          <div class="field">
+            <label>Jumlah profil untuk di-start</label>
+            <input type="number" id="autoCount" class="input" value="3" min="1" />
+          </div>
+          <div class="field">
+            <label>Filter berdasarkan tag (opsional)</label>
+            <select id="autoTag" class="input"></select>
+          </div>
+          <div class="row-btns">
+            <button class="btn primary" id="autoStart">▶ Start massal</button>
+            <button class="btn" id="autoStopAll">■ Stop semua</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Log Otomatisasi</h3><button class="btn small" id="clearLog">Bersihkan</button></div>
+          <div id="autoLog" class="log"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Settings ===== -->
+    <section class="view hidden" id="view-settings">
+      <div class="card">
+        <div class="card-head"><h3>Tema Tampilan</h3></div>
+        <p class="muted">Pilih warna tema dashboard. Pilihan tersimpan otomatis.</p>
+        <div class="theme-grid" id="themeGrid">
+          <button class="theme-opt" data-theme="ungu" style="--a:#9b8cff;--b:#5b8def"><span class="theme-sw"></span>Ungu</button>
+          <button class="theme-opt" data-theme="cyber" style="--a:#2d9bff;--b:#00d4ff"><span class="theme-sw"></span>Cyber Biru</button>
+          <button class="theme-opt" data-theme="emerald" style="--a:#10c98a;--b:#36e0b0"><span class="theme-sw"></span>Emerald</button>
+          <button class="theme-opt" data-theme="sunset" style="--a:#ff7a59;--b:#ffb347"><span class="theme-sw"></span>Sunset</button>
+          <button class="theme-opt" data-theme="pink" style="--a:#ff5ca8;--b:#b15cff"><span class="theme-sw"></span>Pink Neon</button>
+          <button class="theme-opt" data-theme="emas" style="--a:#e0b454;--b:#ffd479"><span class="theme-sw"></span>Emas Mewah</button>
+          <button class="theme-opt" data-theme="merah" style="--a:#ff5a6e;--b:#ff8a5c"><span class="theme-sw"></span>Merah</button>
+          <button class="theme-opt" data-theme="aqua" style="--a:#22b8d6;--b:#36e0b0"><span class="theme-sw"></span>Aqua</button>
+          <button class="theme-opt" data-theme="rainbow" style="--a:#b15cff;--b:#36e0b0"><span class="theme-sw"></span>Rainbow</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Koneksi AdsPower API</h3></div>
+        <p class="muted">Untuk mode <strong>Live API</strong>, aplikasi <strong>AdsPower</strong> harus berjalan di komputer ini. Local API mengontrol start/stop profil; API Key dipakai untuk mengambil daftar profil dari cloud Anda. Default Local API AdsPower: <code>http://local.adspower.net:50325</code></p>
+        <div class="field">
+          <label>Local API Base URL</label>
+          <input type="text" id="setLocalUrl" class="input" placeholder="http://local.adspower.net:50325" />
+        </div>
+        <div class="field">
+          <label>AdsPower API Key</label>
+          <input type="password" id="setToken" class="input" placeholder="API Key dari pengaturan akun AdsPower" />
+        </div>
+        <div class="row-btns">
+          <button class="btn primary" id="saveSettings">Simpan</button>
+          <button class="btn" id="testConn">Tes koneksi</button>
+        </div>
+        <p id="connResult" class="muted"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Ekspor &amp; Pindah Data</h3></div>
+        <p class="muted">Untuk pindah ke laptop baru atau ke AdsPower. <strong>Catatan:</strong> file ini berisi email &amp; password — simpan di tempat aman.</p>
+        <div class="row-btns" style="flex-wrap:wrap;gap:8px">
+          <button class="btn primary" id="exportAdsPower">📤 Ekspor untuk AdsPower (CSV)</button>
+          <button class="btn" id="exportBackup">📦 Ekspor backup penuh (JSON)</button>
+          <button class="btn" id="importBackup">📥 Impor backup (JSON)</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" />
+        </div>
+        <p class="muted" id="exportResult" style="margin-top:10px"></p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Data</h3></div>
+        <p class="muted">Mode dummy memakai data contoh yang tersimpan di browser Anda.</p>
+        <button class="btn danger" id="resetData">Reset data dummy</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Modal profil -->
+<div class="modal hidden" id="modal">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="modalTitle">Profil Baru</h3><button class="x" id="modalClose">✕</button></div>
+    <div class="field"><label>Nama profil</label><input type="text" id="mTitle" class="input" /></div>
+    <div class="field"><label>Sistem Operasi</label>
+      <select id="mOs" class="input"><option>Windows</option><option>macOS</option><option>Linux</option><option>Android</option></select>
+    </div>
+    <div class="field"><label>Tag (pisahkan dengan koma)</label><input type="text" id="mTags" class="input" placeholder="ecommerce, akun-1" /></div>
+    <div class="field"><label>Group (opsional)</label><input type="text" id="mGroup" class="input" placeholder="contoh: Klien Utama, Internal" /></div>
+    <div class="field"><label>Brand (opsional)</label><input type="text" id="mBrand" class="input" placeholder="contoh: Toko A, MerekX" /></div>
+    <div class="grid-2">
+      <div class="field"><label>Email Gmail (opsional)</label><input type="text" id="mEmail" class="input" placeholder="nama@gmail.com" /></div>
+      <div class="field"><label>Kata sandi (opsional)</label><input type="text" id="mPass" class="input" placeholder="sandi akun" /></div>
+    </div>
+    <div class="field"><label>Situs web — dibuka saat tombol ▶ diklik (opsional)</label>
+      <input type="text" id="mUrl" class="input" placeholder="contoh: facebook.com — kosongkan untuk otomatis" /></div>
+    <div class="field"><label>Property GSC (opsional) — agar tombol "Go to GSC" langsung ke dashboard property</label>
+      <input type="text" id="mGSC" class="input" placeholder="sc-domain:contoh.com  atau  https://www.contoh.com/" /></div>
+    <div class="grid-3">
+      <div class="field"><label>Tipe proxy</label>
+        <select id="mProxyType" class="input"><option value="">Tanpa proxy</option><option>HTTP</option><option>SOCKS5</option></select>
+      </div>
+      <div class="field"><label>Host</label><input type="text" id="mProxyHost" class="input" /></div>
+      <div class="field"><label>Port</label><input type="text" id="mProxyPort" class="input" /></div>
+    </div>
+    <div class="row-btns">
+      <button class="btn primary" id="modalSave">Simpan</button>
+      <button class="btn" id="modalCancel">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Bulk Add Gmail -->
+<div class="modal hidden" id="gmailModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Bulk Add Gmail</h3><button class="x" id="gmailClose">✕</button></div>
+    <p class="muted">Tempel akun Gmail, <strong>satu akun per baris</strong>. Format:
+      <code>email@gmail.com:password</code> — pemisah boleh <code>:</code> <code>/</code> atau spasi.
+      Password opsional. Tiap baris dibuatkan satu profil browser.</p>
+    <div class="field">
+      <label>Daftar akun Gmail</label>
+      <textarea id="gmailList" class="input" rows="7"
+        placeholder="akun1@gmail.com:pass123&#10;akun2@gmail.com:pass456&#10;akun3@gmail.com"></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="field"><label>Sistem Operasi</label>
+        <select id="gmailOs" class="input"><option>Windows</option><option>macOS</option><option>Linux</option><option>Android</option></select>
+      </div>
+      <div class="field"><label>Tag tambahan (opsional)</label>
+        <input type="text" id="gmailTags" class="input" placeholder="warmup, batch-1" />
+      </div>
+    </div>
+    <p class="muted" id="gmailPreview"></p>
+    <div class="row-btns">
+      <button class="btn primary" id="gmailSave">Buat profil</button>
+      <button class="btn" id="gmailCancel">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
