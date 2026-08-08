@@ -161,6 +161,36 @@ Arti tiap potongannya:
 
 Satu baris ini melakukan 3 hal sekaligus: bikin repo, sambungkan, dan kirim.
 
+> ⚠️ **Jebakan Cara 1 yang baru ketahuan (8 Agustus 2026).** Cara ini mengirim isinya,
+> **tapi belum tentu menetapkan "pasangan tetap"** antara cabang di komputermu dan cabang di
+> GitHub. Akibatnya, berminggu-minggu kemudian saat kamu mengetik `git push` biasa, muncul:
+>
+> ```
+> fatal: The current branch main has no upstream branch.
+> ```
+>
+> Ini **bukan kerusakan** — Git cuma belum tahu cabang ini pasangannya yang mana. Obatnya
+> sekali saja:
+>
+> ```bash
+> git push -u origin main
+> ```
+>
+> Tanda berhasil: muncul baris `branch 'main' set up to track 'origin/main'`. Sesudah itu,
+> `git push` polos sudah cukup selamanya.
+>
+> 🔍 **Cara mengecek duluan** (sebelum kena error), jalankan di folder proyek:
+>
+> ```bash
+> git config --get branch.main.remote
+> ```
+>
+> Kalau keluar `origin` = sudah berpasangan, aman. Kalau **tidak keluar apa-apa** = belum,
+> jalankan `git push -u origin main` sekali.
+>
+> 🏢 Analoginya: nomornya sudah tersimpan di kontak, tapi belum ditandai sebagai "nomor utama".
+> Jadi waktu kamu bilang "kirim ke sana", HP-nya balik bertanya "ke nomor yang mana?"
+
 ### Cara 2: Lewat website (kalau lebih nyaman klik-klik)
 
 1. Buka <https://github.com/new>
@@ -253,6 +283,7 @@ gh repo view --web
 |---|---|---|
 | `fatal: not a git repository` | Folder ini belum jadi proyek git | Ketik `git init` dulu |
 | `Author identity unknown` | Git belum tahu siapa pengirimnya | Isi identitas — lihat **bagian B.3** |
+| `no upstream branch` | Cabang ini belum punya pasangan tetap di GitHub | `git push -u origin main` (sekali saja) — lihat kotak ⚠️ di **bagian C** |
 | `does not have any commits yet` | Belum ada satu pun kardus yang disegel | Wajar kalau `commit` barusan gagal; perbaiki dulu penyebabnya, lalu `commit` ulang |
 | `LF will be replaced by CRLF` | **Bukan error** — cuma beda cara Windows & Linux menandai ganti baris | Abaikan, Git merapikannya sendiri |
 | `remote origin already exists` | Sudah pernah disambungkan | Ganti alamatnya: `git remote set-url origin <alamat-baru>` |
@@ -279,13 +310,22 @@ kebawa?"* Kalau berbunyi, penyimpanan **dibatalkan otomatis**.
      **JANGAN dikirim.** Hapus dari berkas, lalu **ganti kunci itu** di layanannya
      (kunci yang pernah bocor harus dianggap sudah bocor selamanya).
 
-   - ✅ **Kalau itu cuma tulisan contoh** di panduan (mis. `ghp_xxxxxx`,
-     `postgresql://user:password@`, `AKIAIOSFODNN7EXAMPLE`) → itu **alarm palsu**,
-     dan kamu boleh melewatinya sekali ini:
+   - ✅ **Kalau itu cuma tulisan contoh** di panduan — misalnya token GitHub contoh yang
+     diawali `ghp_`, alamat database contoh yang memuat kata `user` dan `password` sebelum
+     tanda `@`, atau kunci AWS contoh yang diawali `AKIA` lalu 16 huruf kapital — maka itu
+     **alarm palsu**, dan kamu boleh melewatinya sekali ini:
 
      ```bash
      git commit --no-verify -m "pesanmu"
      ```
+
+> 💡 **Kenapa 3 contoh di atas ditulis sebagai keterangan, bukan bentuk aslinya?**
+> Karena kalau ditulis utuh, **panduan ini sendiri** akan memicu alarm setiap kali disunting
+> (pernah terjadi 8 Agustus 2026). Alarm palsu yang berulang itu berbahaya: lama-lama orang
+> berhenti membacanya dan tangannya refleks mengetik `--no-verify` — lalu suatu hari alarm
+> yang **asli** ikut dilewati tanpa sadar. Jadi tolong **jangan kembalikan** contoh-contoh itu
+> ke bentuk utuhnya. 🏢 Analoginya: alarm kebakaran yang tiap hari berbunyi palsu, ujung-ujungnya
+> diabaikan orang sekantor — dan itu justru saat kebakaran sungguhan terjadi.
 
 > 🔒 **Kenapa harus kamu yang memutuskan, bukan AI?** Karena pagar keamanan yang bisa dilewati
 > otomatis = bukan pagar. Asisten AI (termasuk Claude) **tidak boleh** menembus penjaga ini atas
