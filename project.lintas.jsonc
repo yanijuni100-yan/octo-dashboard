@@ -1,0 +1,51 @@
+{
+  // project.lintas.jsonc - KARTU IDENTITAS PROJECT (di-generate saat pasang lintasAI)
+  // Sumber-tunggal mesin-baca: AI baca 1 tempat (tak meraba tiap sesi). Dijaga robot anti-basi.
+  // Kolom stack diisi OTOMATIS dari package.json; intent diisi AI di sesi pertama.
+
+  "schema_version": 1,
+
+  // DEKLARASI: tujuan project (AI isi sesi pertama - ganti 'pending').
+  "intent": {
+    "purpose": "pending",
+    "domain": "pending"
+  },
+
+  // DERIVE: diisi otomatis dari package.json. Robot cek masih cocok (DeriveMatch).
+  "stack": {
+    "type": "node",
+    "package_manager": "npm",
+    "frameworks": ["react"],
+    "_derived_from": "package.json"
+  },
+
+  // CAP LINGKUNGAN: versi runtime saat kit dipasang (pembanding dev vs client). Auto-rekam, jangan edit tangan.
+  "environment": {
+    "recorded_node": "v24.14.1",
+    "recorded_node_major": 24,
+    "recorded_os": "win32",
+    "_derived_from": "process.version saat pasang"
+  },
+
+  // RUJUK: pointer ke sumber lain - JANGAN salin nilainya.
+  "refs": {
+    "kit_version": ".claude-kit/.install-manifest.json#metadata.kit_version",
+    "architecture": "docs/architecture.md",
+    "glossary": "docs/glossary.md",
+    "registry": "docs/architecture_auto.md"
+  },
+
+  // DEKLARASI inti: peta modul -> lokasi (AI isi saat tahu struktur). Robot cek path ADA.
+  "modules": [],
+
+  // DEKLARASI: konvensi mesin-relevan singkat (AI/tim isi).
+  "conventions": [],
+
+  // (multi-repo, opsional) - CATATAN niat, BUKAN keamanan (akses nyata di GitHub+CODEOWNERS).
+  "split": {
+    "role": null,
+    "access_tier": null,
+    "base_name": null,
+    "portfolio_ref": null
+  }
+}

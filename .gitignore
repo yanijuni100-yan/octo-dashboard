@@ -1,12 +1,37 @@
 node_modules/
 dist/
+out/
 build/
 *.log
 .DS_Store
 Thumbs.db
 .env
 
-# Jangan pernah commit file sensitif:
-octo-backup-*.json   # backup akun (email + password)
-*.pfx                # sertifikat code signing
+# Jangan pernah commit file sensitif.
+# CATATAN: komentar WAJIB di baris sendiri — komentar di belakang pola
+# (mis. "data/  # ...") bikin pola rusak & TIDAK jadi meng-ignore.
+# penyimpanan data dashboard (email + password) + backup + profil Chrome (cookie login)
+data/
+# backup akun (email + password)
+octo-backup-*.json
+# ekspor CSV (email + password)
+adspower-import-*.csv
+# sertifikat code signing
+*.pfx
 *.p12
+
+
+# setelan izin Claude Code khusus komputer ini (beda tiap orang, jangan dibagikan)
+.claude/settings.local.json
+
+# === pola lintasAI (ditambah otomatis pemasang) ===
+# Cegah kebocoran: rahasia kit, identitas per-staff, folder cadangan.
+.claude-kit/.audit-log
+.claude-kit/.manifest-secret
+.claude-kit/.install-manifest.json
+.git-identity-*
+.staff-profile.md
+.claude-kit.backup-*/
+*.backup-*
+*.bak
+*.bak.*

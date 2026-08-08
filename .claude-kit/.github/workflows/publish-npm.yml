@@ -1,0 +1,130 @@
+name: Publish to NPM on tag
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  # Gerbang tes WAJIB sebelum terbit. Tag push TIDAK memicu validate.yml
+  # (itu cuma jalan di push/PR ke main), jadi tanpa job ini commit rusak
+  # yang diberi tag bisa lolos terbit ke npm. Gate ini cegah itu.
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # fetch-depth 0 = ambil seluruh riwayat + tag, konsisten dengan job preflight di validate.yml.
+          # Membuat cek "versi vs tag" + "kode vs tes" di langkah preflight:strict di bawah TERDEFINISI
+          # (bukan "tag git tidak tersedia"). CATATAN JUJUR: deteksi "[BREAKING] tanpa naik angka BESAR"
+          # secara struktural HANYA aktif di gerbang PR (validate.yml) -- saat tag di-push, tag == versi
+          # package.json (cmpSemver==0), jadi cek breaking (yang butuh versi > tag) tak tercapai di sini.
+          # Jadi gerbang publish ini mengandalkan cek CL-1/CL-2 (entri CHANGELOG + bukan placeholder) yang
+          # TIDAK butuh tag; deteksi breaking tetap peringatan PR-time, bukan pemblokir terbit.
+          fetch-depth: 0
+      - name: Fast smoke (parse + manifest + critical files)
+        shell: pwsh
+        run: |
+          .\tests\smoke-fast.ps1
+          if ($LASTEXITCODE -ne 0) { throw "fast-smoke failed (exit $LASTEXITCODE)" }
+      - name: Cache PowerShell modules (Pester)
+        id: cache-pester
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: ~\Documents\PowerShell\Modules
+          key: psmodules-pester-v5-${{ runner.os }}
+      - name: Install Pester (cache miss)
+        if: steps.cache-pester.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck -Scope CurrentUser
+      - name: Run Pester tests (retry untuk flaky transien langka)
+        shell: pwsh
+        run: |
+          # WHY retry: suite kadang gagal 1 tes secara TRANSIEN di runner CI (IO/timing/antivirus/
+          # paralel) walau 8x jalan lokal hijau -> flake langka tak boleh memblokir PUBLISH. Retry
+          # cuma menyelamatkan flake transien: gagal NYATA tetap gagal 3x -> publish TETAP diblokir.
+          cd $env:GITHUB_WORKSPACE
+          $max = 3
+          for ($i = 1; $i -le $max; $i++) {
+            Write-Host "=== Pester percobaan $i/$max ==="
+            pwsh -NoProfile -File .\tests\Run-Tests.ps1
+            $code = $LASTEXITCODE
+            if ($code -eq 0) { Write-Host "Tes lulus pada percobaan $i."; exit 0 }
+            Write-Warning "Percobaan $i gagal (exit $code)."
+          }
+          throw "Tes tetap gagal setelah $max percobaan -> bukan flake transien, ada masalah nyata."
+      - name: Run Node tests (node:test runner, mesin baru Strangler Fig)
+        shell: pwsh
+        run: |
+          # Gerbang "mesin baru" sebelum terbit: port Node rusak TAK boleh lolos ke npm.
+          # Cermin job node-test di validate.yml (daftar-berkas eksplisit; `node --test <dir>` tak andal).
+          node --version
+          $files = Get-ChildItem -Path tests -Filter *.test.mjs | ForEach-Object { $_.FullName }
+          if (-not $files) { throw "Tidak ada berkas tes Node (tests/*.test.mjs)" }
+          node --test $files
+          if ($LASTEXITCODE -ne 0) { throw "Node tests gagal (exit $LASTEXITCODE)" }
+
+      # Gerbang KETAT kelengkapan rilis sebelum TERBIT ke npm (LAPIS 2 cetak-biru, Tahap D).
+      # WHY khusus publish: tepat sebelum terbit adalah saat cek kelengkapan rilis PALING berharga --
+      # cegah rilis dengan CHANGELOG belum punya entri utk versi ini / masih teks-contoh kerangka / versi
+      # drift. Mode --strict: PENTING ikut MEMBLOKIR terbit (bukan cuma peringatan). --skip-ps: Pester +
+      # smoke sudah dijalankan langkah di atas -> jangan 2x. (preflight juga jalankan robot kecocokan +
+      # pemindai Unicode + ESLint yang belum dicek gerbang publish sebelumnya.)
+      - name: Pasang dev-deps (eslint) dari lockfile
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw "npm ci gagal (exit $LASTEXITCODE)" }
+      - name: Gerbang ketat kelengkapan rilis (preflight --strict)
+        shell: pwsh
+        run: |
+          npm run preflight:strict -- --skip-ps
+          if ($LASTEXITCODE -ne 0) { throw "Gerbang rilis GAGAL (exit $LASTEXITCODE): ada GENTING/PENTING - JANGAN terbit sebelum diperbaiki." }
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      # id-token: write WAJIB untuk npm Trusted Publishing (OIDC) — GitHub menerbitkan
+      # token-OIDC sekali-pakai yang dipercaya npm, jadi TIDAK perlu NPM_TOKEN lagi. Ini
+      # juga yang membuat npm OTOMATIS melampirkan provenance (bukti-pabrik Sigstore) untuk
+      # repo PUBLIK ini. Tanpa baris ini, publish OIDC gagal "missing id-token permission".
+      id-token: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      # Trusted Publishing (OIDC) butuh npm >= 11.5.1; Node 22 membawa npm 10.x -> upgrade dulu.
+      - name: Pasang npm terbaru (>=11.5.1, syarat OIDC Trusted Publishing)
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      - name: Verify version (tag mode) atau skip (manual dispatch)
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Package version: $PKG_VERSION"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "Tag version: $TAG_VERSION"
+            if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+              echo "ERROR: Tag version ($TAG_VERSION) does not match package.json ($PKG_VERSION)"
+              exit 1
+            fi
+            echo "OK: tag matches package.json"
+          else
+            echo "Not a tag trigger (GITHUB_REF=$GITHUB_REF). Skipping version match check."
+            echo "Will publish package.json version: $PKG_VERSION"
+          fi
+
+      # OIDC Trusted Publishing: TANPA token sama sekali (jangan set NODE_AUTH_TOKEN —
+      # kalau di-set, npm coba pakai token itu, bukan OIDC). provenance otomatis dilampirkan
+      # (publishConfig.provenance:true + repo publik + id-token:write di atas).
+      - name: Publish to npm (OIDC Trusted Publishing — tanpa token; provenance otomatis)
+        run: npm publish --access public

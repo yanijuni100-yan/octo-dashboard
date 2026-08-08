@@ -1,0 +1,137 @@
+# .github/workflows/auto-merge-shared.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# RAMBU "GABUNG-OTOMATIS-AMAN" (auto-merge update kecil, tahan update besar)
+#
+# Apa gunanya (bahasa non-programmer):
+#   Robot ini menjaga permintaan-gabung OTOMATIS yang dibuat robot terima-update
+#   (RECEIVE_BACKEND_UPDATE.yml). Aturannya:
+#     - Update KECIL (cuma perbaikan, nomor belakang naik: 1.2.3 -> 1.2.4)
+#       => digabung OTOMATIS begitu semua cek otomatis hijau. Nol klik.
+#     - Update BESAR (fitur/ubahan besar, nomor depan/tengah naik: 1.x -> 2.0
+#       atau 1.2 -> 1.3) => DITAHAN, diberi label "perlu-ditinjau-manusia" +
+#       komentar. Seorang penanggung jawab (lead) WAJIB cek + klik gabung manual.
+#
+#   Analogi: kayak filter email. Tagihan listrik rutin (kecil, sama tiap bulan)
+#   boleh auto-bayar. Tagihan beda jauh dari biasanya (besar) ditahan dulu,
+#   minta kamu cek manual sebelum bayar.
+#
+# PRASYARAT PENTING:
+#   "Gabung-otomatis" GitHub hanya AKTIF kalau repo ini sudah dinyalakan
+#   "kunci pengaman gabung" (branch protection) + minimal 1 cek otomatis wajib.
+#   Jalankan dulu: .github/scripts/setup-branch-protection.ps1 (sekali per repo).
+#   Tanpa itu, GitHub tidak punya "syarat tunggu" sehingga --auto tidak menahan.
+#
+# CARA PASANG:
+#   1. Copy file ini ke .github/workflows/auto-merge-shared.yml di repo FRONTEND.
+#   2. Sesuaikan 3 baris bertanda  # << SESUAIKAN  di bawah (nama paket + label).
+#   3. Pastikan robot terima-update memberi label  auto-update  pada PR-nya
+#      (RECEIVE_BACKEND_UPDATE.yml sudah memberi label ini).
+#   4. Nyalakan kunci pengaman gabung (lihat PRASYARAT di atas).
+#
+# CATATAN: nama paket "@project/shared" + branch "main" di bawah = ASUMSI.
+#          Ganti sesuai proyekmu (ada tanda  # << SESUAIKAN ).
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Gabung-otomatis update kecil paket bersama
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+# Hak minimum yang diperlukan (default deny -> tambah yang perlu saja)
+permissions:
+  contents: write          # untuk menggabung
+  pull-requests: write      # untuk komentar + enable auto-merge
+
+jobs:
+  putuskan-auto-atau-tahan:
+    # Hanya jalan untuk permintaan-gabung yang diberi label oleh robot terima-update.
+    # Label "auto-update" diberikan oleh RECEIVE_BACKEND_UPDATE.yml.
+    if: contains(github.event.pull_request.labels.*.name, 'auto-update')
+    runs-on: ubuntu-latest
+    env:
+      SHARED_PKG: '@project/shared'   # << SESUAIKAN: nama paket bersama kamu
+      SAFE_LABEL: 'auto-update'        # << SESUAIKAN: label dari robot terima-update
+      HOLD_LABEL: 'perlu-ditinjau-manusia'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Ambil kode (untuk lihat perubahan package.json)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Tentukan besar kenaikan versi (kecil vs besar)
+        id: semver
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # Ambil baris versi paket bersama dari package.json, versi LAMA vs BARU.
+          # Contoh baris: "@project/shared": "^1.2.3"
+          esc_pkg=$(printf '%s' "$SHARED_PKG" | sed 's/[\/&]/\\&/g')
+          old_line=$(git show "$BASE":package.json 2>/dev/null | grep -E "\"${esc_pkg}\"" || true)
+          new_line=$(git show "$HEAD":package.json 2>/dev/null | grep -E "\"${esc_pkg}\"" || true)
+
+          # Bersihkan jadi angka X.Y.Z saja (buang ^ ~ >= dan tanda kutip).
+          extract_ver() { printf '%s' "$1" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1; }
+          old_ver=$(extract_ver "$old_line")
+          new_ver=$(extract_ver "$new_line")
+
+          echo "Paket bersama: $SHARED_PKG"
+          echo "Versi lama: ${old_ver:-(tidak ada)} | Versi baru: ${new_ver:-(tidak ada)}"
+
+          # Kalau gagal baca versi (mis. perubahan bukan di package.json) -> aman = TAHAN.
+          if [ -z "${old_ver}" ] || [ -z "${new_ver}" ]; then
+            # Catat alasan eksplisit (debug) supaya lead tahu INI bukan bug CI, tapi versi tak terbaca.
+            echo "::warning::Versi lama/baru paket bersama tidak terbaca dari package.json (old='${old_ver:-}', new='${new_ver:-}'). Default aman: TAHAN. Cek: perubahan memang di package.json? nama paket cocok env SHARED_PKG?"
+            echo "tingkat=tahan" >> "$GITHUB_OUTPUT"
+            echo "alasan=Tidak bisa baca versi lama/baru paket bersama dari package.json. Default aman: tahan, minta manusia cek." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          old_major=$(printf '%s' "$old_ver" | cut -d. -f1)
+          old_minor=$(printf '%s' "$old_ver" | cut -d. -f2)
+          new_major=$(printf '%s' "$new_ver" | cut -d. -f1)
+          new_minor=$(printf '%s' "$new_ver" | cut -d. -f2)
+
+          # Update KECIL = major+minor sama (cuma nomor belakang/patch yang naik).
+          if [ "$old_major" = "$new_major" ] && [ "$old_minor" = "$new_minor" ]; then
+            echo "tingkat=kecil" >> "$GITHUB_OUTPUT"
+            echo "alasan=Cuma perbaikan kecil ($old_ver -> $new_ver). Aman digabung otomatis setelah cek hijau." >> "$GITHUB_OUTPUT"
+          else
+            echo "tingkat=besar" >> "$GITHUB_OUTPUT"
+            echo "alasan=Perubahan besar ($old_ver -> $new_ver). Ditahan untuk ditinjau manusia." >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update KECIL -> nyalakan gabung-otomatis (tunggu cek hijau)
+        if: steps.semver.outputs.tingkat == 'kecil'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ steps.semver.outputs.alasan }}"
+          # --auto: GitHub MENUNGGU semua cek wajib hijau, baru gabung. Aman.
+          # Butuh branch protection aktif; kalau belum, perintah ini gagal -> lihat PRASYARAT.
+          if gh pr merge "$PR_NUMBER" --auto --squash; then
+            echo "Gabung-otomatis dinyalakan. Akan tergabung sendiri begitu semua cek wajib hijau."
+          else
+            rc=$?
+            gh pr comment "$PR_NUMBER" --body "ℹ️ Gabung-otomatis belum bisa dinyalakan. Penyebab paling umum: 'kunci pengaman gabung' (branch protection) belum aktif di repo ini. Minta owner/lead jalankan setup-branch-protection.ps1 sekali. Sementara itu, gabung manual aman setelah cek hijau." || true
+            # JUJUR: tandai job GAGAL (merah) supaya owner/lead TAHU gabung tidak jadi -
+            # jangan diam-diam hijau padahal PR tak ter-merge (bug v1.6.2 yang di-fix v1.6.3).
+            echo "::error::Gagal menyalakan gabung-otomatis (rc=$rc). Kemungkinan kunci pengaman gabung (branch protection) belum aktif. Jalankan .github/scripts/setup-branch-protection.ps1 dulu."
+            exit "$rc"
+          fi
+
+      - name: Update BESAR -> tahan + minta tinjau manusia
+        if: steps.semver.outputs.tingkat == 'besar' || steps.semver.outputs.tingkat == 'tahan'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ steps.semver.outputs.alasan }}"
+          gh pr edit "$PR_NUMBER" --add-label "$HOLD_LABEL" || true
+          gh pr comment "$PR_NUMBER" --body "🛑 **Ditahan untuk ditinjau manusia.** ${{ steps.semver.outputs.alasan }}
+
+          Seorang penanggung jawab (lead) frontend WAJIB: (1) tarik versi ini ke komputer, (2) cek halaman yang kena, (3) baru klik **Merge pull request**. Jangan gabung otomatis untuk perubahan besar."

@@ -1,0 +1,86 @@
+{
+  "name": "lintasai",
+  "version": "1.61.0",
+  "description": "AI workflow kit untuk Claude Code dengan tier model + cross-repo automation (Windows-first)",
+  "bin": {
+    "lintasai": "bin/lintasai.js"
+  },
+  "files": [
+    "bin/",
+    "*.ps1",
+    "*.psm1",
+    "setup-pola-b.mjs",
+    "kit.mjs",
+    "update-kit.mjs",
+    "uninstall.mjs",
+    "team-setup.mjs",
+    "install-windows.mjs",
+    "lib/",
+    "templates/",
+    "docs/",
+    "!docs/plans",
+    "!docs/plans/**",
+    "docs/plans/POLA_REPO_AMAN.md",
+    "!docs/BUKU_PELAJARAN.md",
+    "tests/",
+    "!tests/*.test.mjs",
+    "!tests/*.Tests.ps1",
+    "AUDIT_POST_SETUP_PROMPT_v1.md",
+    "CHANGELOG.md",
+    "CLAUDE_universal_v1.md",
+    "CONTRIBUTING.md",
+    "JALANKAN_KIT.md",
+    "LINTASAI_WORKFLOWS_v1.md",
+    "MULAI_DI_SINI.md",
+    "PANDUAN_PASANG_AMAN.md",
+    "POST_SETUP_CHECKLIST_PROMPT_v1.md",
+    "PROJECT_LIFECYCLE_PROMPT_v1.md",
+    "README.md",
+    "SECURITY.md",
+    "SPLIT_REPO_MIGRATION_PROMPT_v1.md",
+    "TEAM_ROLLOUT_GUIDE_v1.md",
+    "UPDATE_KIT_PROMPT_v1.md",
+    "*.template",
+    "AGENTS.md.template",
+    ".github/",
+    "LICENSE",
+    ".gitignore"
+  ],
+  "scripts": {
+    "test": "node tests/run-node-tests.mjs",
+    "test:coverage": "node tests/run-node-tests.mjs --experimental-test-coverage",
+    "test:watch": "node tests/run-node-tests.mjs --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "preflight": "node tests/preflight.mjs",
+    "preflight:strict": "node tests/preflight.mjs --strict"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
+  },
+  "keywords": [
+    "ai",
+    "claude-code",
+    "powershell",
+    "kit",
+    "workflow"
+  ],
+  "author": "ojokesusu",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "win32"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ojokesusu/lintasAI.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": false
+  }
+}

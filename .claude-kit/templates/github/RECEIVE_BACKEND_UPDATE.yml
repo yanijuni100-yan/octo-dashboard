@@ -1,0 +1,136 @@
+name: Receive @<project>/shared update (Real-time)
+
+on:
+  repository_dispatch:
+    types: [shared-package-published]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@<project>'
+
+      # RINGKASAN PERUBAHAN TIPE (v1.6.1+): simpan tipe LAMA sebelum update biar bisa dibandingkan.
+      # Catatan: sesuaikan path dist/index.d.ts kalau struktur paket berbeda.
+      - name: Simpan tipe lama (sebelum update)
+        run: |
+          cp node_modules/@<project>/shared/dist/index.d.ts /tmp/old-types.d.ts 2>/dev/null || echo "" > /tmp/old-types.d.ts
+
+      - name: Install new shared version
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # KEAMANAN: nilai client_payload (dikendalikan pengirim dispatch) WAJIB lewat env-var,
+          # JANGAN tempel langsung ke baris run: -> cegah script-injection (pola aman = AUTO_MERGE_SHARED_WORKFLOW.yml).
+          VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          npm install "@<project>/shared@${VERSION}"
+
+      - name: Hitung perubahan tipe (apa yang berubah)
+        id: typediff
+        run: |
+          NEW="node_modules/@<project>/shared/dist/index.d.ts"
+          DIFF=$(diff /tmp/old-types.d.ts "$NEW" 2>/dev/null | head -50 || true)
+          if [ -z "$DIFF" ]; then DIFF="(tidak ada perubahan tipe terdeteksi otomatis - cek pesan commit backend di bawah)"; fi
+          {
+            echo "summary<<DIFF_EOF"
+            echo "$DIFF"
+            echo "DIFF_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check if breaking change
+        id: breaking
+        env:
+          # KEAMANAN: lewat env-var, jangan tempel client_payload langsung ke baris run:
+          IS_BREAKING: ${{ github.event.client_payload.is_breaking }}
+        run: |
+          if [ "$IS_BREAKING" = "true" ]; then
+            echo "is_breaking=true" >> $GITHUB_OUTPUT
+            echo "WARNING: This is a BREAKING change. Manual review required."
+          else
+            echo "is_breaking=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create PR
+        id: cpr
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(deps): bump @<project>/shared to v${{ github.event.client_payload.version }}"
+          title: "${{ steps.breaking.outputs.is_breaking == 'true' && '⚠️ BREAKING' || '🔄 Auto' }}-update @<project>/shared to v${{ github.event.client_payload.version }}"
+          body: |
+            **Triggered by**: Backend publish (real-time)
+            **Version**: v${{ github.event.client_payload.version }}
+            **Breaking**: ${{ github.event.client_payload.is_breaking }}
+            **Backend commit**: [`${{ github.event.client_payload.commit }}`](${{ github.event.client_payload.changelog_url }})
+
+            ## Backend Commit Message
+            \`\`\`
+            ${{ github.event.client_payload.commit_message }}
+            \`\`\`
+
+            ## Apa yang berubah di tipe data (otomatis)
+            \`\`\`diff
+            ${{ steps.typediff.outputs.summary }}
+            \`\`\`
+
+            ## Action Required
+
+            **Untuk Frontend Staff**:
+            1. Pull branch ini di local
+            2. Test halaman yang affected (kalau yakin breaking change)
+            3. Approve + merge kalau OK
+
+            **Untuk Owner (if BREAKING)**:
+            - JANGAN auto-merge
+            - Review backend commit dulu
+            - Test di staging
+            - Plan rollback kalau perlu
+
+            ## Auto-Generated
+            Latency: 3-5 menit dari backend publish.
+            Workflow: `.github/workflows/receive-shared-update.yml`
+          branch: auto/shared-update-${{ github.event.client_payload.version }}
+          delete-branch: true
+          labels: |
+            auto-update
+            shared-types
+            ${{ steps.breaking.outputs.is_breaking == 'true' && 'breaking-change' || '' }}
+
+      - name: Notify Discord (optional)
+        if: env.DISCORD_WEBHOOK_FRONTEND != ''
+        env:
+          DISCORD_WEBHOOK_FRONTEND: ${{ secrets.DISCORD_WEBHOOK_FRONTEND }}
+          # KEAMANAN: lewat env-var, jangan tempel client_payload langsung ke baris run:
+          VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          if [ "${{ steps.breaking.outputs.is_breaking }}" = "true" ]; then
+            EMOJI=":warning:"
+            TITLE="BREAKING change PR ready"
+          else
+            EMOJI=":arrows_counterclockwise:"
+            TITLE="Auto-update PR ready"
+          fi
+          curl -X POST -H 'Content-Type: application/json' \\
+            -d "{\"content\":\"$EMOJI **$TITLE**\\n@<project>/shared v${VERSION}\\nPR: ${{ steps.cpr.outputs.pull-request-url }}\"}" \\
+            "$DISCORD_WEBHOOK_FRONTEND"
+
+# Setup:
+# Save sebagai .github/workflows/receive-shared-update.yml di repo FRONTEND kamu (mis. <project>-frontend).
+# Default secrets (no setup needed):
+#   - GITHUB_TOKEN (auto-provided by GitHub Actions)
+# Optional secret untuk Discord:
+#   - DISCORD_WEBHOOK_FRONTEND
+#
+# Replace placeholder:
+# - <project> → project name (e.g. akses)

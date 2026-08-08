@@ -1,0 +1,78 @@
+# .github/CODEOWNERS.template
+# Template GitHub CODEOWNERS
+#
+# Cara pakai:
+# 1. Copy file ini jadi `.github/CODEOWNERS` (tanpa `.template`).
+# 2. Ganti SEMUA placeholder `<...>` dengan GitHub username aktual (huruf kecil, prefix `@`).
+# 3. Commit. GitHub otomatis request review ke owner saat ada PR yang sentuh file terkait.
+#
+# Sintaks: <pola-path>  @user1 @user2
+# Pola lebih spesifik (di bawah) menang dari pola umum (di atas).
+# Dokumentasi resmi: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# ============================================================
+# POLA ANTI-BOTTLENECK (DISARANKAN) - JANGAN cuma 1 owner!
+# ============================================================
+# - Tulis BEBERAPA owner per area (mis. @andi @budi @citra). GitHub butuh
+#   approval dari SALAH SATU saja (any-of-N) - kalau 1 orang cuti, yang lain
+#   tetap bisa menyetujui. Jadi BUKAN bottleneck. (1 owner = titik macet tunggal.)
+# - Lebih baik (kalau pakai ORGANISASI): pakai TEAM sebagai owner, mis.
+#   @org/backend-reviewers. Tambah/kurangi anggota tim TANPA mengedit file ini.
+#   Aktifkan juga "code review assignment" (Settings tim) -> beban review dibagi
+#   rata otomatis, tidak ada 1 orang kebanjiran. (Team WAJIB akses Write + visible.)
+# - Gate area SENSITIF saja (auth/payment/DB/keamanan) dengan owner senior.
+#   Area umum cukup "Require approvals: 1" dari siapa saja -> cepat, tidak semua
+#   harus nunggu owner.
+# - Owner WAJIB punya akses Write ke repo. Staf lain (di luar daftar) tetap bisa
+#   push + buka PR + review/komen; approval mereka sah, hanya tidak dihitung
+#   sebagai "code owner approval" untuk area ber-owner.
+
+# ── Default owner (fallback untuk semua file yang tidak match rule lain) ──
+*                       @<owner-username>
+
+# ── Area sensitif: auth & payment wajib reviewer senior ──
+/src/auth/              @<senior-dev>
+/src/auth/**            @<senior-dev>
+/src/payment/           @<senior-dev>
+/src/payment/**         @<senior-dev>
+
+# ── Dokumentasi: owner + tech writer ──
+/docs/                  @<owner-username> @<tech-writer>
+/docs/**                @<owner-username> @<tech-writer>
+
+# ── Infra CI/CD & meta repo: cuma owner ──
+/.github/               @<owner-username>
+/.github/**             @<owner-username>
+
+# ── Konfigurasi env & secret-ish (kalau ada) ──
+/.env.example           @<owner-username> @<senior-dev>
+
+# ──────────────────────────────────────────────────────────────────
+# CONTOH POLA UNTUK SPLIT 2-TIER (Frontend / Backend / Shared)
+# ──────────────────────────────────────────────────────────────────
+# Pakai pola ini kalau proyek pakai monorepo dengan apps/ folder
+# (atau adaptasi pattern path-nya kalau pakai split-repo terpisah).
+#
+# Konvensi 2-tier:
+# - Frontend Staff (4 orang): akses Frontend area + Shared (CRUD via API, no DDL)
+# - Backend Staff  (2 orang): akses semua area (full DB control + DDL)
+# - Owner: fallback reviewer untuk semua area
+
+# Frontend area - Frontend + Backend + owner boleh review
+/apps/frontend/         @<frontend1> @<frontend2> @<frontend3> @<frontend4> @<backend1> @<backend2> @<owner-username>
+/apps/frontend/**       @<frontend1> @<frontend2> @<frontend3> @<frontend4> @<backend1> @<backend2> @<owner-username>
+
+# Backend area - Backend + owner saja (Frontend Staff dikecualikan)
+/apps/backend/          @<backend1> @<backend2> @<owner-username>
+/apps/backend/**        @<backend1> @<backend2> @<owner-username>
+
+# Shared area (types + zod schema) - semua staff + owner
+/apps/shared/           @<frontend1> @<frontend2> @<frontend3> @<frontend4> @<backend1> @<backend2> @<owner-username>
+/apps/shared/**         @<frontend1> @<frontend2> @<frontend3> @<frontend4> @<backend1> @<backend2> @<owner-username>
+
+# CATATAN:
+# - Username harus member repo dengan minimal write access supaya bisa dipanggil sebagai reviewer.
+# - Hapus baris yang tidak relevan untuk proyekmu.
+# - Jangan commit file ini dalam keadaan masih ada placeholder `<...>` - CI akan menolak.
+# - Kalau pakai split-repo (3 repo terpisah, bukan monorepo): salin pola di atas ke CODEOWNERS
+#   repo masing-masing, tanpa prefix `/apps/<area>/` - cukup pakai `*` per repo.

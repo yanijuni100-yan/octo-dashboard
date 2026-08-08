@@ -1,0 +1,22 @@
+# Staff roster - direktori tim lintasAI (siapa + peran/role).
+# Dipakai AI/owner sebagai RUJUKAN "siapa boleh apa" saat menetapkan scope kerja.
+# Catatan: penegakan otomatis per-role belum aktif - ini RUJUKAN, bukan pagar keras.
+#
+# Schema per entry:
+#   - email: <git config user.email>
+#     name: <display name>
+#     github: <github handle>
+#     role: <owner | backend-architect | frontend-architect | backend-developer | frontend-developer | ui-developer>
+#     added_at: <YYYY-MM-DD>
+#     notes: <opsional>
+#
+# Auto-generated skeleton oleh setup-pola-b.ps1. LENGKAPI nama/github entry "owner"
+# + tambah staff sebelum onboard.
+
+staff:
+  - email: replace-with-owner-email@example.com
+    name: <Owner Name>
+    github: <owner-github-handle>
+    role: owner
+    added_at: <YYYY-MM-DD>
+    notes: Project owner. Real contact via Signal/Telegram untuk hal sensitif.

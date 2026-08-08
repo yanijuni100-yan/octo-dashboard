@@ -1,0 +1,69 @@
+// ============================================================================
+// project.lintas.jsonc - KARTU IDENTITAS PROJECT (contoh terisi)
+// ============================================================================
+// APA INI: 1 berkas yang mendeklarasikan identitas + struktur project SEKALI,
+// supaya AI baca 1 tempat (tak meraba-raba tiap sesi = cepat + hemat token) dan
+// kamu ubah/baca project cukup di 1 tempat (kayak $variable PHP / const React).
+//
+// KENAPA .jsonc: format JSON universal (Node + alat apa pun baca native) TAPI tetap
+// bisa komentar '//' tiap baris (kamu bisa baca penjelasan langsung di sini). Menggantikan
+// .psd1 lama yang cuma bisa dibaca PowerShell (lihat ADR-003: migrasi bertahap ke Node).
+//
+// CARA PAKAI: salin jadi `project.lintas.jsonc` di AKAR project (sejajar package.json).
+// Biasanya AI yang isi + robot pemeriksa yang jaga - kamu tak perlu sentuh manual.
+//
+// 3 jenis kolom (PENTING - jangan menyalin fakta yang sudah ada di tempat lain):
+//   - DEKLARASI : fakta yang TAK bisa ditebak mesin (intent, modules, conventions).
+//   - DERIVE    : ringkasan turunan (stack) -> diisi otomatis + dicek robot vs package.json.
+//   - RUJUK     : pointer ke sumber lain (versi kit, architecture.md) -> JANGAN salin nilainya.
+// ============================================================================
+{
+  "schema_version": 1, // versi skema kartu ini (jangan diubah manual)
+
+  // --- DEKLARASI: tujuan project (TAK bisa ditebak mesin - ini alasan utama kartu ini ada) ---
+  "intent": {
+    "purpose": "Dashboard tagihan internal untuk tim finance - input invoice + lihat status bayar.", // 2-3 kalimat. AI isi sesi pertama dari obrolan; awalnya 'pending'.
+    "domain": "invoice-finance" // domain bisnis singkat (mis. 'seo-portfolio', 'toko-online')
+  },
+
+  // --- DERIVE: diisi OTOMATIS saat pasang dari package.json. Robot cek masih cocok (DeriveMatch). ---
+  // JANGAN salin daftar dependency penuh - cukup ringkasan inti.
+  "stack": {
+    "type": "node", // node | go | rust | python | dotnet | unknown
+    "package_manager": "pnpm", // pnpm | npm | yarn | bun (dicek: lockfile-nya ada?)
+    "frameworks": ["next", "prisma"], // nama paket inti (robot cek: ADA di package.json deps?)
+    "_derived_from": "package.json" // penanda: ini TURUNAN, bukan deklarasi tangan
+  },
+
+  // --- RUJUK: pointer ke sumber asli - JANGAN simpan salinan nilainya (cegah salinan-beku-basi) ---
+  "refs": {
+    "kit_version": ".claude-kit/.install-manifest.json#metadata.kit_version", // versi kit dibaca dari sini, bukan disalin
+    "architecture": "docs/architecture.md", // narasi panjang (manusia baca); robot cek path ADA
+    "glossary": "docs/glossary.md",
+    "registry": "docs/architecture_auto.md"
+  },
+
+  // --- DEKLARASI inti: peta modul -> lokasi. Robot cek tiap 'path' ADA di disk (PathExists). ---
+  // Ini yang bikin AI tak meraba: "modul auth ada di mana?" -> baca sini, bukan grep seluruh repo.
+  "modules": [
+    { "name": "auth", "path": "src/lib/auth", "purpose": "login + sesi + cek hak akses", "role": "core" },
+    { "name": "invoice", "path": "src/features/invoice", "purpose": "CRUD + status bayar", "role": "feature" },
+    { "name": "db", "path": "prisma", "purpose": "skema + migrasi database", "role": "core" }
+  ],
+
+  // --- DEKLARASI: konvensi mesin-relevan singkat (kesepakatan tim) ---
+  "conventions": [
+    { "rule": "semua-handler-api-bungkus-cek-auth", "applies_to": "src/app/api/**" },
+    { "rule": "validasi-input-di-boundary", "applies_to": "src/app/api/**" }
+  ],
+
+  // --- (multi-repo, OPSIONAL) - CATATAN niat, BUKAN keamanan ---
+  // Pertahanan akses NYATA ada di level GitHub repo (siapa boleh clone) + CODEOWNERS.
+  // Kolom ini cuma mendokumentasikan niat; isi null kalau project tunggal (bukan multi-repo).
+  "split": {
+    "role": null, // backend | frontend | shared | service | dashboard
+    "access_tier": null, // sensitive | feature | shared (CATATAN saja, bukan penegak)
+    "base_name": null, // nama dasar portfolio (mis. 'acme')
+    "portfolio_ref": null // pointer ke Buku Induk portfolio (opsional)
+  }
+}

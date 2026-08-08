@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["after 9am every weekday"],
+  "timezone": "Asia/Jakarta",
+  "labels": ["renovate"],
+  "packageRules": [
+    {
+      "matchPackageNames": ["@<project>/shared"],
+      "schedule": ["at any time"],
+      "automerge": false,
+      "groupName": "shared package",
+      "reviewers": ["<owner-username>"],
+      "labels": ["auto-update", "shared-types"],
+      "minimumReleaseAge": "5 minutes"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "minimumReleaseAge": "7 days"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "rangeStrategy": "bump",
+  "rebaseWhen": "behind-base-branch"
+}

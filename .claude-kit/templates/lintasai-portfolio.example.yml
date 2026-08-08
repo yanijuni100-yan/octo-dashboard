@@ -1,0 +1,109 @@
+# lintasai-portfolio.yml — BUKU INDUK repo + akses (contoh terisi)
+#
+# Versi 1 · template lintasAI · CATATAN PUSAT (registry) untuk "kelola banyak repo".
+#
+# APA INI: 1 berkas tempat kamu MENCATAT SEMUA repo proyekmu + siapa boleh akses masing-masing.
+# Kamu cukup mencatat keputusan di 1 tempat ini; langkah kelola-banyak-repo (atur izin akses,
+# pasang/update kit, kirim tipe-bersama) kamu/AI kerjakan dengan MERUJUK catatan ini.
+# CATATAN JUJUR: ADA pembaca-ringkasan otomatis (mode aman cuma-baca) yang menampilkan isi berkas
+# ini sebagai ringkasan/papan repo (lib/portfolio-read.mjs + lib/portfolio-read.ps1) — TAPI itu
+# cuma MENAMPILKAN. Penerapan izin GitHub TETAP MANUAL: tak ada skrip yang membaca berkas ini
+# lalu mengeset izin otomatis (lihat ACCESS_CONTROL_NREPO_v1.md: AI cetak rencana, manusia yang klik).
+#
+# 🏢 Analogi: kayak "daftar tamu + denah ruangan" di resepsionis kantor — tertulis resmi
+#    siapa boleh masuk ruang mana, bukan "kira-kira" / "etika doang".
+#
+# CARA ISI: salin berkas ini jadi `lintasai-portfolio.yml` (buang ".example"),
+#    simpan di SATU tempat pusat (repo "meta"/induk milik owner, atau laptop owner),
+#    lalu ganti contoh di bawah dengan repo & tim aslimu. Panduan langkah-demi-langkah
+#    bahasa awam ada di `PORTFOLIO_REGISTRY_v1.md`.
+#
+# ⚠️ Berkas ini TIDAK menyimpan kunci rahasia / password. Cuma NAMA repo + NAMA tim + peran.
+#    Aman dibaca AI. Tetap simpan di repo PRIVATE (jangan publik) supaya peta tim tidak bocor.
+
+# ──────────────────────────────────────────────────────────────────────────
+# 1) META — identitas portfolio
+# ──────────────────────────────────────────────────────────────────────────
+portfolio:
+  base_name: bigseo                 # awalan nama repo (mis. bigseo-backend, bigseo-dashboard)
+  github_owner: ojokesusu           # nama org / akun GitHub pemilik repo
+  default_visibility: private       # SEMUA repo bisnis = private. Jangan public.
+
+# ──────────────────────────────────────────────────────────────────────────
+# 2) ACCESS GROUPS — kelompok staff (jadi "GitHub Team")
+#    Tingkat kepercayaan, BUKAN jabatan. "Siapa boleh lihat apa".
+#    Prinsip: TOLAK-DEFAULT — staff mulai TANPA akses, ditambah seperlunya task.
+# ──────────────────────────────────────────────────────────────────────────
+access_groups:
+  - id: core-backend                # 3-5 orang paling dipercaya
+    description: "Pegang server + database + logika rahasia. Lingkaran terkecil."
+    members:                        # username GitHub (bukan email)
+      - ojokesusu
+      - lead-backend-1
+      - lead-backend-2
+
+  - id: feature-staff               # ~40 orang pengerjaan tampilan/fitur
+    description: "Hanya repo fitur/tampilan yang mereka kerjakan. TIDAK lihat backend+DB."
+    members:
+      - staff-fitur-a
+      - staff-fitur-b
+      # ... (sisanya)
+
+  - id: shared-readers              # semua yang butuh BACA kontrak tipe-bersama
+    description: "Boleh BACA paket tipe-bersama. Tidak boleh ubah."
+    members:
+      - ojokesusu
+      - lead-backend-1
+      - staff-fitur-a
+      - staff-fitur-b
+
+# ──────────────────────────────────────────────────────────────────────────
+# 3) REPOS — daftar tiap repo + peran + tingkat-sensitif + siapa boleh AKSES
+#    access_tier: "sensitive" = ada rahasia (DB/kunci) → repo fitur DILARANG isi rahasia.
+#                 "feature"   = tampilan/fitur, TIDAK boleh punya kunci DB.
+#                 "shared"    = cuma bentuk-data, tanpa rahasia.
+#    allowed_teams: daftar access_groups.id yang boleh CLONE repo ini (izin GitHub).
+#                   INI lapis yang benar-benar MEMBLOKIR penyalinan kode.
+# ──────────────────────────────────────────────────────────────────────────
+repos:
+  - name: bigseo-backend
+    role: backend                   # peran: backend | frontend | shared | dashboard | service | tools
+    access_tier: sensitive          # ada DATABASE_URL + kunci → lingkaran terkecil
+    allowed_teams: [core-backend]   # HANYA 3-5 orang. ~40 staff TIDAK diundang → 403 saat clone.
+    consumers: []                   # repo yang memanggil API/tipe dari sini (diisi nanti kalau perlu)
+
+  - name: bigseo-shared
+    role: shared
+    access_tier: shared             # cuma tipe/kontrak, tanpa rahasia
+    allowed_teams: [shared-readers] # boleh dibaca banyak orang (read-only)
+    consumers: [bigseo-backend, bigseo-dashboard]
+
+  - name: bigseo-dashboard
+    role: dashboard                 # 1 layar terpadu + lapisan penghubung (BFF) ke layanan
+    access_tier: feature            # TIDAK punya kunci DB. Panggil data lewat API backend.
+    allowed_teams: [core-backend, feature-staff]
+    consumers: []
+
+  # Contoh repo FITUR/KAPABILITAS terpisah (tambah sebanyak BATAS-AKSES nyata, bukan angka target):
+  - name: bigseo-data-domain
+    role: service                   # 1 kapabilitas bisnis = 1 repo + laci-data sendiri + loket API
+    access_tier: sensitive          # resep rahasia kapabilitas ini → lingkaran terbatas
+    allowed_teams: [core-backend]
+    consumers: [bigseo-dashboard]
+
+  - name: bigseo-landing
+    role: frontend
+    access_tier: feature
+    allowed_teams: [feature-staff]
+    consumers: []
+
+# ──────────────────────────────────────────────────────────────────────────
+# 4) CATATAN PENTING (jangan dilupa)
+# ──────────────────────────────────────────────────────────────────────────
+# - JUMLAH REPO ikut JUMLAH BATAS-AKSES nyata, BUKAN angka target.
+#   Kalau cuma ada 2 kelompok yang tak boleh saling lihat → 2-3 repo cukup.
+#   6-10 repo SAH hanya kalau memang ada 6-10 batas-akses berbeda.
+# - "allowed_teams" = izin CLONE GitHub = SATU-SATUNYA yang benar-benar memblokir salin kode.
+#   CODEOWNERS itu BEDA (cuma "siapa wajib me-review"), BUKAN izin clone. Jangan tertukar.
+# - Repo "feature"/"frontend"/"dashboard" DILARANG menyimpan kunci rahasia (DATABASE_URL dll).
+#   Mereka ambil data lewat API backend. Pengaman ini dipaksa di SPLIT_REPO_PREPROVISION_v1.md.

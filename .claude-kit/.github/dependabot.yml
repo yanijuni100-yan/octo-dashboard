@@ -1,0 +1,22 @@
+# Dependabot - jaga pin SHA GitHub Actions repo kit ini tetap segar (anti-pin-basi).
+#
+# Konteks: workflow kit (.github/workflows/*) mengunci tiap Action ke commit SHA penuh
+# (supply-chain hardening ala OpenSSF Scorecard - cegah label bergerak "@v4" dibajak).
+# Tanpa updater, SHA terkunci jadi BASI -> berhenti dapat patch keamanan Action. Dependabot
+# otomatis buka PR menaikkan SHA saat ada rilis baru + MEMPERTAHANKAN format pin "@<sha> # v4".
+#
+# Catatan: ini untuk repo KIT sendiri saja. Project staf yang memakai template workflow kit
+# dijaga oleh Renovate (templates/github/RENOVATE_FRONTEND.json, extends config:recommended
+# yang sudah mencakup manager github-actions). Dependabot github-actions hanya memindai
+# .github/workflows/ -> folder templates/github/ (data template) tidak ikut tersentuh.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore"

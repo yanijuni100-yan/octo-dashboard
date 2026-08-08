@@ -1,0 +1,17 @@
+{
+  "_catatan": "lintasAI memasang OTOMATIS hook 'pengingat lintasAI' ke .claude/settings.json project saat init/update (lewat lib/lang-hook-wiring.mjs). Berkas ini = CONTOH bentuk hook-nya, untuk referensi / pasang manual bila perlu. Hook ini NON-BLOKIR: tiap pesan user, ia menambah 2 pengingat ke konteks AI - (1) 'jawab Bahasa Indonesia, gaya non-programmer' DAN (2) 'pertimbangkan 8 divisi profesional + perketat di titik risiko (login/bayar/data-pribadi/upload/skema-DB/rilis)' - tak pernah menghentikan kerja (selalu exit 0). Hapus baris '_catatan' saat menyalin manual. Path: berkas kit terpasang di .claude-kit/, jadi command menunjuk ke sana via $CLAUDE_PROJECT_DIR (di-expand Claude Code).",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude-kit/lib/lang-reminder.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

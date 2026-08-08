@@ -1,0 +1,32 @@
+# CODEOWNERS - repo lintasAI (kit)
+#
+# Menentukan "approver wajib" per area: saat ada Pull Request yang menyentuh
+# file di bawah, GitHub otomatis meminta review ke owner yang terdaftar.
+# Sintaks: <pola-path>  @user   (pola lebih spesifik di bawah menang).
+# Dok resmi: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# CATATAN: CODEOWNERS = siapa WAJIB me-review, BUKAN siapa boleh clone/unduh.
+# Pengaman "anti-curi kode" = izin akses repo (collaborator), bukan file ini.
+# Lihat templates/ACCESS_CONTROL_NREPO_v1.md.
+#
+# ANTI-BOTTLENECK: saat tim bertambah, JANGAN biarkan 1 owner per area.
+# Ganti jadi SET (mis. `@ojokesusu @lead2 @lead3`) atau TEAM (`@org/reviewers`)
+# -> approval dari salah satu cukup (any-of-N), tidak macet kalau 1 orang cuti.
+# Gate area sensitif saja; area umum cukup "Require approvals: 1" dari siapa saja.
+
+# ── Default: owner repo (fallback semua file) ──
+*                           @ojokesusu
+
+# ── Area sensitif kit: keamanan / installer / manifest / aturan inti ──
+/lib/                       @ojokesusu
+/lib/**                     @ojokesusu
+/bin/                       @ojokesusu
+/bin/**                     @ojokesusu
+/setup-pola-b.ps1           @ojokesusu
+/team-setup.ps1             @ojokesusu
+/update-kit.ps1             @ojokesusu
+/uninstall.ps1              @ojokesusu
+/install-windows.ps1        @ojokesusu
+/CLAUDE_universal_v1.md     @ojokesusu
+/.github/                   @ojokesusu
+/.github/**                 @ojokesusu

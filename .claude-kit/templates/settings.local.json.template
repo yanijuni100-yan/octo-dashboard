@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./.claude-kit/kit.ps1:*)",
+      "Bash(./.claude-kit/setup-pola-b.ps1:*)",
+      "Bash(git add:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)",
+      "Bash(git config user.email:*)",
+      "Bash(git config user.name:*)",
+      "Bash(git diff:*)",
+      "Bash(git fetch:*)",
+      "Bash(git log:*)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(git restore:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git status:*)",
+      "Bash(git switch:*)",
+      "Bash(node --version)",
+      "Bash(node -v)",
+      "Bash(npm --version)",
+      "Bash(npm view lintasai*)",
+      "Bash(npx lintasai install*)",
+      "Bash(npx lintasai uninstall*)",
+      "Bash(npx lintasai update*)",
+      "Bash(npx lintasai version*)",
+      "Bash(npx prisma generate)",
+      "Bash(pnpm --version)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pwsh -File ./.claude-kit/kit.ps1:*)",
+      "Bash(pwsh ./.claude-kit/kit.ps1:*)",
+      "Bash(pwsh ./.claude-kit/setup-pola-b.ps1:*)"
+    ]
+  }
+}

@@ -1,0 +1,169 @@
+# .github/workflows/backup-schemas.yml
+# Daily backup pg_dump per-schema (Layer 3 di MCP_SETUP.md section 2.1d)
+#
+# Backup tiap schema staff (contoh: schema_a, schema_b, dst. — GANTI dengan nama schema proyekmu) terpisah → upload ke Supabase Storage.
+# Restore selective per-schema kalau ada accidental DROP TABLE.
+#
+# SETUP (sekali, owner):
+# 1. Tambah secret GitHub di Settings → Secrets:
+#    - DATABASE_URL_BACKUP: connection string dengan role yang punya akses ke semua schema
+#                            (pakai postgres superuser atau role dedicated 'backup_runner')
+#    - SUPABASE_STORAGE_BUCKET: nama bucket Supabase Storage untuk upload (mis. 'db-backups')
+#    - SUPABASE_SERVICE_ROLE_KEY: untuk upload via Supabase API (owner-only)
+# 2. Update env SCHEMAS_TO_BACKUP di workflow ini sesuai schema yang ada.
+# 3. Workflow jalan otomatis tiap hari 03:00 WIB (20:00 UTC malam sebelumnya).
+# 4. Manual trigger via "Actions" tab → "Backup Schemas" → "Run workflow".
+
+name: Backup Schemas Daily
+
+on:
+  schedule:
+    # 20:00 UTC = 03:00 WIB next day
+    - cron: '0 20 * * *'
+  workflow_dispatch:  # manual trigger via UI
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      # Schemas yang akan di-backup. SESUAIKAN dengan setup tim.
+      SCHEMAS_TO_BACKUP: 'schema_a schema_b'   # CONTOH — GANTI dengan nama schema proyekmu (pisah spasi)
+      RETENTION_DAYS: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Verify DATABASE_URL_BACKUP secret
+        env:
+          DATABASE_URL_BACKUP: ${{ secrets.DATABASE_URL_BACKUP }}
+        run: |
+          if [ -z "$DATABASE_URL_BACKUP" ]; then
+            echo "::error::DATABASE_URL_BACKUP secret belum di-set"
+            echo "Setup: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          echo "✓ DATABASE_URL_BACKUP detected"
+
+      - name: Dump each schema
+        env:
+          DATABASE_URL_BACKUP: ${{ secrets.DATABASE_URL_BACKUP }}
+        run: |
+          mkdir -p backups
+          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+
+          for schema in $SCHEMAS_TO_BACKUP; do
+            echo "===== Backing up schema: $schema ====="
+            DUMP_FILE="backups/${schema}-${TIMESTAMP}.sql"
+
+            # pg_dump options:
+            #   --schema=<name>    : cuma schema ini
+            #   --no-owner         : skip OWNER statement (lebih portable saat restore)
+            #   --clean            : DROP statement sebelum CREATE (clean restore)
+            #   --if-exists        : aman kalau target object tidak ada
+            #   --no-privileges    : skip GRANT (kita re-grant manual saat restore)
+            pg_dump "$DATABASE_URL_BACKUP" \
+              --schema="$schema" \
+              --no-owner \
+              --clean \
+              --if-exists \
+              --no-privileges \
+              --file="$DUMP_FILE"
+
+            # Verify file tidak kosong
+            if [ ! -s "$DUMP_FILE" ]; then
+              echo "::error::Backup file $DUMP_FILE kosong — kemungkinan schema $schema tidak ada atau access denied"
+              exit 1
+            fi
+
+            SIZE=$(du -h "$DUMP_FILE" | cut -f1)
+            echo "✓ Backup $schema selesai: $DUMP_FILE ($SIZE)"
+
+            # Gzip compress
+            gzip "$DUMP_FILE"
+            echo "✓ Compressed: ${DUMP_FILE}.gz"
+          done
+
+          echo ""
+          echo "===== Summary ====="
+          ls -lh backups/
+
+      - name: Upload backups to Supabase Storage
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_STORAGE_BUCKET: ${{ secrets.SUPABASE_STORAGE_BUCKET }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$SUPABASE_PROJECT_REF" ] || [ -z "$SUPABASE_STORAGE_BUCKET" ]; then
+            echo "::warning::Supabase upload secrets belum lengkap, skip upload. Backup tersimpan sebagai artifact GitHub Actions."
+            exit 0
+          fi
+
+          for file in backups/*.gz; do
+            FILENAME=$(basename "$file")
+            UPLOAD_URL="https://${SUPABASE_PROJECT_REF}.supabase.co/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${FILENAME}"
+
+            HTTP_CODE=$(curl -s -o /tmp/upload-response.txt -w "%{http_code}" \
+              -X POST "$UPLOAD_URL" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              -H "Content-Type: application/gzip" \
+              --data-binary @"$file")
+
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+              echo "✓ Uploaded: $FILENAME"
+            else
+              echo "::warning::Upload $FILENAME gagal (HTTP $HTTP_CODE):"
+              cat /tmp/upload-response.txt
+            fi
+          done
+
+      - name: Upload backups as GitHub Actions artifact (fallback)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: schema-backups-${{ github.run_id }}
+          path: backups/*.gz
+          retention-days: 30
+
+      - name: Cleanup old backups in Supabase Storage
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_STORAGE_BUCKET: ${{ secrets.SUPABASE_STORAGE_BUCKET }}
+        run: |
+          # Skip kalau secrets belum di-set
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Skip cleanup (Supabase secrets belum di-set)"
+            exit 0
+          fi
+
+          # Cleanup logic: hapus file >30 hari di bucket
+          # Note: Supabase Storage tidak punya built-in TTL, jadi kita query list + filter manual.
+          # Untuk implementasi production-grade, owner setup Supabase Storage Policy atau Edge Function.
+          echo "TODO: implement cleanup script via Supabase Storage API atau Edge Function."
+          echo "Untuk sekarang, manual cleanup: Supabase Dashboard → Storage → $SUPABASE_STORAGE_BUCKET → delete >30 hari."
+
+  notify-on-failure:
+    needs: backup
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify owner via webhook (optional)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"text\":\"🚨 Backup schemas FAILED — repo ${{ github.repository }} run ${{ github.run_id }}. Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+          else
+            echo "::warning::SLACK_WEBHOOK_URL tidak di-set, skip notification"
+          fi

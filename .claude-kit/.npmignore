@@ -1,0 +1,72 @@
+# File yang JANGAN di-commit ke repo standar tim
+# (Kit ini sendiri tidak generate file build, tapi standar untuk repo)
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+ehthumbs_vista.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.history/
+.project
+.classpath
+
+# Backup yang dihasilkan install-windows.ps1 saat re-install
+*.backup-*
+*.bak
+*.old
+
+# Log
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Secret — JANGAN PERNAH commit
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials*
+secrets/
+.manifest-secret
+
+# Per-staff identity markers + install manifest (jangan commit)
+.git-identity-*
+.staff-profile.md
+.install-manifest.json
+
+# Catatan kerja lokal (tidak untuk dibagikan)
+*.local.md
+
+# Build / output (kalau kit di-extend dengan tools nantinya)
+node_modules/
+dist/
+build/
+out/
+.next/
+.cache/
+
+# Test coverage
+coverage/
+*.lcov
+testResults.xml
+
+# Paket lokal saat zipping/testing
+*.zip
+*.tar.gz
+*.tgz
+
+# Audit log (security decisions: GPG skip, allowlist bypass, etc) — local only
+.audit-log
+/.claude-kit/.audit-log
+
+# Eksperimen / pilot lokal (benchmark, fixture coba-coba) — tidak untuk rilis
+experiments/

@@ -1,0 +1,29 @@
+# Append to .github/workflows/publish-shared.yml di repo BACKEND kamu (mis. <project>-backend)
+# Trigger frontend repo untuk auto-update setelah publish
+
+# Step ini ditambahkan SETELAH "Publish to GitHub Packages" + "Notify Discord"
+
+      - name: Trigger frontend repo update (real-time)
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3
+        with:
+          token: ${{ secrets.FRONTEND_REPO_DISPATCH_TOKEN }}
+          repository: <owner>/<project>-frontend
+          event-type: shared-package-published
+          client-payload: |
+            {
+              "version": "${{ env.NEW_VERSION }}",
+              "commit": "${{ github.sha }}",
+              "commit_message": ${{ toJson(github.event.head_commit.message) }},
+              "changelog_url": "https://github.com/<owner>/<project>-backend/commits/main",
+              "is_breaking": "${{ contains(github.event.head_commit.message, 'BREAKING') }}"
+            }
+
+# Setup:
+# 1. Generate PAT di GitHub > Settings > Developer settings > Personal access tokens (classic)
+# 2. Scope: repo (full) + workflow
+# 3. Save as: FRONTEND_REPO_DISPATCH_TOKEN
+# 4. Tambah ke backend repo > Settings > Secrets > Actions
+#
+# Replace placeholder:
+# - <owner> → GitHub username/org (e.g. ojokesusu)
+# - <project> → project name (e.g. akses)

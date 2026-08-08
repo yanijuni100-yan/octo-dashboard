@@ -1,0 +1,48 @@
+# .github/workflows/preflight.yml - Gerbang mutu OTOMATIS lintasAI (OPT-IN).
+#
+# APA INI: tiap kali kode dikirim ke GitHub (push / pull request ke main), GitHub menjalankan
+# robot mutu lintasAI (cek kecocokan versi, pemindai huruf-tipuan Unicode, tes, registry docs, dll)
+# lewat `npx lintasai preflight`. Ini "backstop MESIN": cek mutu tetap jalan walau AI lupa
+# menjalankan Gerbang Pra-Rilis (sec.4.6) di laptop. Kalau gagal -> PR ditandai MERAH (jangan
+# digabung sebelum hijau). Menutup celah "robot mutu cuma jalan kalau AI ingat memanggilnya".
+#
+# CARA PASANG (opt-in, tak dipasang otomatis): `npx lintasai enable-preflight-ci`
+#   (atau salin berkas ini manual ke .github/workflows/ project kamu).
+# CARA MATIKAN: hapus berkas .github/workflows/preflight.yml ini.
+#
+# WAJIB windows-latest: CLI `lintasai` saat ini Windows-only (v1.x) - di Linux runner ia berhenti
+# dengan pesan "Windows-only". Jadi job ini SENGAJA pakai windows-latest.
+name: lintasAI Preflight (cek mutu)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Batalkan run lama kalau ada push baru di branch/PR yang sama (hemat menit CI).
+concurrency:
+  group: lintasai-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: windows-latest
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Pasang dependency (kalau ada package.json)
+        shell: pwsh
+        run: if (Test-Path package.json) { npm ci }
+
+      # --skip-ps: lewati cek khusus PowerShell (Pester/smoke kit) - di project klien yang dijaga
+      # = robot mutu Node (kecocokan versi, Unicode, tes klien, perf, registry). Lihat docs/preflight.md.
+      - name: Jalankan robot mutu lintasAI (preflight)
+        shell: pwsh
+        run: npx --yes lintasai preflight --skip-ps

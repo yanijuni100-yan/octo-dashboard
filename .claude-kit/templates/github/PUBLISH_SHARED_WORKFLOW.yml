@@ -1,0 +1,75 @@
+name: Publish @<project>/shared
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'prisma/schema.prisma'
+      - 'src/shared/**'
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@<project>'
+      - run: npm ci
+      - name: Generate types
+        run: npm run generate:types
+      # PENGAMAN (v1.6.1+): cegah tipe RAHASIA ter-export ke paket bersama yang dipakai frontend.
+      # Kalau ada tipe sensitif ke-export, workflow GAGAL sebelum publish (anti-bocor).
+      - name: Guard cegah tipe rahasia bocor
+        run: |
+          FORBIDDEN='Credential|Password|ApiKey|Secret|Session|Token|PrivateKey'
+          if grep -rEi "export[^=]*($FORBIDDEN)" src/shared/ 2>/dev/null; then
+            echo "::error::Tipe rahasia terdeteksi di src/shared/ (paket ini dipakai frontend). Hapus dari export sebelum publish."
+            exit 1
+          fi
+          echo "OK: tidak ada tipe rahasia yang ter-export ke paket bersama."
+      # PENOMORAN VERSI PINTAR (v1.6.1+): tentukan naik MAJOR/MINOR/PATCH dari pesan commit
+      # (conventional commits). 'BREAKING CHANGE' atau 'feat!:' = major; 'feat:' = minor; selain itu = patch.
+      - name: Tentukan jenis kenaikan versi (semantic)
+        id: bump
+        run: |
+          MSGS=$(git log -30 --pretty=%B)
+          if echo "$MSGS" | grep -qE 'BREAKING CHANGE|^[a-z]+(\(.+\))?!:'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$MSGS" | grep -qE '^feat(\(.+\))?:'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Bump version
+        run: |
+          cd shared-dist
+          npm version ${{ steps.bump.outputs.type }} -m 'chore(shared): bump version [skip ci]'
+      - name: Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd shared-dist
+          npm publish
+      - name: Notify Discord
+        if: env.DISCORD_WEBHOOK_DEPS != ''
+        env:
+          DISCORD_WEBHOOK_DEPS: ${{ secrets.DISCORD_WEBHOOK_DEPS }}
+        run: |
+          VERSION=$(node -p "require('./shared-dist/package.json').version")
+          MESSAGE=$(printf '{"content":"🔔 **@<project>/shared v%s published**\\nFrontend tim: PR Renovate akan masuk dalam 24 jam, atau manual \`npm install @<project>/shared@latest\` untuk segera dapat update.\\nChangelog: https://github.com/<owner>/<project>-backend/commits/main"}' "$VERSION")
+          curl -X POST -H 'Content-Type: application/json' -d "$MESSAGE" "$DISCORD_WEBHOOK_DEPS"
+      - name: Push version commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git push

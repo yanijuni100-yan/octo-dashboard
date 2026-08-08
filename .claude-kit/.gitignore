@@ -1,0 +1,11 @@
+# Ditambah otomatis oleh pemasang lintasAI (cegah kebocoran rahasia + metadata):
+.install-manifest.json
+.manifest-secret
+.audit-log
+.git-identity-*
+*.bak
+*.backup-*
+*.env
+*.env.local
+*.pem
+*.key

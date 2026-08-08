@@ -1,0 +1,17 @@
+{
+  "_catatan": "CONTOH cara menyalakan Palang Rem Otomatis (lib/risk-gate.js, runtime Node.js). OPT-IN: salin blok 'hooks' di bawah ke .claude/settings.json project-mu (gabungkan kalau sudah ada hooks lain). Setelah itu, untuk aksi berisiko (hapus banyak data, sentuh .env, dll) AI akan minta konfirmasi klik dulu. Lihat docs/risk-gate.md. Hapus baris '_catatan' + '_path_note' saat menyalin.",
+  "_path_note": "PENTING: kontrak hook Claude Code memakai SATU string 'command' (binary + path digabung), BUKAN field 'args' terpisah. Butuh Node.js (sudah ada kalau pasang lintasAI via npm; engines node>=18). Sesuaikan path ke lokasi risk-gate.js: setelah pasang kit biasanya '.claude-kit/lib/risk-gate.js' (relatif ke akar project, sama seperti hook dijalankan dari akar project). Kalau hook tak menyala, cek `node --version` jalan + path benar (uji-jalan di docs/risk-gate.md langkah 4).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude-kit/lib/risk-gate.js"
+          }
+        ]
+      }
+    ]
+  }
+}

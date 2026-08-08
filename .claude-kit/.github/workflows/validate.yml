@@ -1,0 +1,229 @@
+name: lintasAI validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Auto-cancel superseded runs on same ref (e.g., new push to PR cancels in-flight CI).
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege: semua job cuma butuh BACA repo (checkout + tes + lint). Tak ada
+# yang menulis ke repo -> default-deny, naikkan hanya yang perlu. (audit least-privilege)
+permissions:
+  contents: read
+
+jobs:
+  # Tier 1 (fail-fast gate, ~30s): parse-all + critical file presence + manifest integrity.
+  # Subsumes the old `ps-parse` job (smoke-fast already runs parser on every .ps1).
+  # All heavy jobs (Pester, PSSA, smoke-setup) gate on this passing.
+  fast-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Run fast smoke (parse + manifest + critical files)
+        shell: pwsh
+        run: |
+          .\tests\smoke-fast.ps1
+          if ($LASTEXITCODE -ne 0) { throw "fast-smoke failed (exit $LASTEXITCODE)" }
+
+  # Paritas runtime: target utama = staff Windows pakai Windows PowerShell 5.1 (bawaan),
+  # BUKAN PowerShell 7. Job ini menjalankan smoke-fast (parse semua .ps1) di 5.1 supaya
+  # sintaks/cmdlet khusus PS7 yang lolos di pwsh tetap tertangkap sebelum rilis. (audit PS51-002)
+  fast-smoke-ps51:
+    runs-on: windows-latest
+    needs: fast-smoke
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Run fast smoke di Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          .\tests\smoke-fast.ps1
+          if ($LASTEXITCODE -ne 0) { throw "fast-smoke (PS 5.1) failed (exit $LASTEXITCODE)" }
+
+  # Tier 2 (parallel, gated on fast-smoke): heavier jobs.
+  smoke-setup:
+    runs-on: windows-latest
+    needs: fast-smoke
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          path: 'kit-source'
+      - name: Smoke test setup-pola-b in temp project
+        shell: pwsh
+        env:
+          CI: 'true'
+        run: |
+          $proj = Join-Path $env:RUNNER_TEMP "fake-proj"
+          New-Item -ItemType Directory -Force $proj | Out-Null
+          Copy-Item -Recurse kit-source "$proj\.claude-kit"
+          Push-Location $proj
+          try {
+            & .\.claude-kit\setup-pola-b.ps1
+            if ($LASTEXITCODE -ne 0) { throw "setup failed" }
+            & .\.claude-kit\kit.ps1 doctor
+            if ($LASTEXITCODE -ne 0) { throw "doctor failed" }
+            Write-Host "smoke OK"
+          } finally { Pop-Location }
+
+  yaml-lint:
+    runs-on: ubuntu-latest
+    needs: fast-smoke
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: YAML structure
+        run: |
+          for f in .github/workflows/*.yml; do python -c "import yaml,sys; yaml.safe_load(open('$f'))"; done
+
+  pester-tests:
+    runs-on: windows-latest
+    needs: fast-smoke
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # Cache PSModules dir keyed on Pester version. Saves ~30-60s per run
+      # by skipping Install-Module download when the cache restores.
+      - name: Cache PowerShell modules (Pester)
+        id: cache-pester
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: ~\Documents\PowerShell\Modules
+          key: psmodules-pester-v5-${{ runner.os }}
+
+      - name: Install Pester (cache miss)
+        if: steps.cache-pester.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run tests (retry untuk flaky transien langka)
+        shell: pwsh
+        run: |
+          # WHY retry: flake transien langka di runner CI (IO/timing) tak boleh bikin PR/merge merah.
+          # Gagal NYATA tetap gagal 3x. Selaras gerbang publish-npm.yml.
+          cd $env:GITHUB_WORKSPACE
+          $max = 3
+          for ($i = 1; $i -le $max; $i++) {
+            Write-Host "=== Pester percobaan $i/$max ==="
+            pwsh -NoProfile -File .\tests\Run-Tests.ps1
+            $code = $LASTEXITCODE
+            if ($code -eq 0) { Write-Host "Tes lulus pada percobaan $i."; exit 0 }
+            Write-Warning "Percobaan $i gagal (exit $code)."
+          }
+          throw "Tes tetap gagal setelah $max percobaan -> bukan flake transien, ada masalah nyata."
+
+  pssa-lint:
+    runs-on: windows-latest
+    needs: fast-smoke
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Cache PowerShell modules (PSScriptAnalyzer)
+        id: cache-pssa
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
+        with:
+          path: ~\Documents\PowerShell\Modules
+          key: psmodules-pssa-${{ runner.os }}
+
+      - name: Install PSScriptAnalyzer (cache miss)
+        if: steps.cache-pssa.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: Install-Module -Name PSScriptAnalyzer -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost,PSUseShouldProcessForStateChangingFunctions
+          if ($results) {
+              $results | Format-Table -AutoSize
+              Write-Error "PSScriptAnalyzer found $($results.Count) issues"
+              exit 1
+          }
+          Write-Host "PSScriptAnalyzer: clean"
+
+  # Gerbang tes "mesin baru" (port Node, Strangler Fig ADR-003). Dijalankan PARALEL pester-tests
+  # supaya port Node yang rusak ketahuan tiap perubahan (dulu HILANG: tests/*.test.mjs tak ter-gate
+  # di CI -> mesin baru tak dijaga otomatis). Node sudah ada di runner windows-latest (engines >=18).
+  node-test:
+    runs-on: windows-latest
+    needs: fast-smoke
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Run Node tests (node:test runner)
+        shell: pwsh
+        run: |
+          # WHY daftar-berkas eksplisit: `node --test <dir>` tak andal lintas-versi (dir dikira modul).
+          # Get-ChildItem -> daftar berkas pasti, lalu node yang jalankan.
+          node --version
+          $files = Get-ChildItem -Path tests -Filter *.test.mjs | ForEach-Object { $_.FullName }
+          if (-not $files) { throw "Tidak ada berkas tes Node (tests/*.test.mjs)" }
+          node --test $files
+          if ($LASTEXITCODE -ne 0) { throw "Node tests gagal (exit $LASTEXITCODE)" }
+
+  # Gerbang "spell-check kode" sisi Node (ESLint) -- sejajar pssa-lint untuk PowerShell. Menutup celah:
+  # dulu 26+ berkas .mjs/.js NOL linter -> typo nama-variabel / kode mati / escape-regex sia-sia / pakai
+  # global tak-terdefinisi baru ketahuan saat runtime. eslint = devDependency (TIDAK ikut ke klien, tidak
+  # di package.json files[]). Dijalankan PARALEL pssa-lint + node-test. Baseline saat ditambah = 0 masalah.
+  node-lint:
+    runs-on: windows-latest
+    needs: fast-smoke
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Pasang dev-deps (eslint) dari lockfile
+        shell: pwsh
+        run: |
+          node --version
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw "npm ci gagal (exit $LASTEXITCODE)" }
+      - name: Jalankan ESLint
+        shell: pwsh
+        run: |
+          npm run lint
+          if ($LASTEXITCODE -ne 0) { throw "ESLint menemukan masalah (exit $LASTEXITCODE)" }
+
+  # Gerbang Pra-Rilis "mode harian" (LAPIS 2 cetak-biru docs/plans/BUKU_PELAJARAN_DAN_PREFLIGHT.md, Tahap D).
+  # Menutup 3 pemeriksa yang BELUM dijaga job lain mana pun: robot kecocokan versi/fakta (drift "ubah A
+  # lupa B"), pemindai huruf-tipuan Unicode, + cek KELENGKAPAN RILIS (versi naik tapi CHANGELOG belum
+  # punya entrinya). Sebelum ini ketiganya cuma dijalankan MANUAL -> blind spot di CI.
+  #
+  # --skip-ps: bagian PowerShell (Pester + smoke) SENGAJA dilewati di sini -- sudah punya job paralel
+  #   sendiri (pester-tests, fast-smoke, fast-smoke-ps51) -> jangan jalankan tes PS 2x (~+15 mnt). Tes Node
+  #   + ESLint memang ikut jalan di dalam preflight (overlap kecil & cepat dgn node-test/node-lint) supaya
+  #   gerbang ini jalan UTUH = sama persis dgn `npm run preflight` yang dijalankan staff di laptop.
+  # Non-strict (default): hanya GENTING yang memblokir (exit 1); PENTING/RAPIKAN = peringatan (tetap hijau).
+  #   Gerbang ketat (--strict) dipakai sebelum TERBIT ke npm -- lihat publish-npm.yml.
+  preflight:
+    runs-on: windows-latest
+    needs: fast-smoke
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          # fetch-depth 0 = ambil seluruh riwayat + tag. Cek "versi vs tag terakhir" + "kode vs tes sejak
+          # tag" butuh tag git; checkout default (depth 1) tak mengambil tag -> kedua cek itu jadi
+          # INFO/dilewati (tetap aman, tapi kurang lengkap). depth 0 mengaktifkannya.
+          fetch-depth: 0
+      - name: Pasang dev-deps (eslint) dari lockfile
+        shell: pwsh
+        run: |
+          node --version
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw "npm ci gagal (exit $LASTEXITCODE)" }
+      - name: Jalankan preflight (robot kecocokan + huruf-tipuan Unicode + kelengkapan rilis)
+        shell: pwsh
+        run: |
+          # `npm run preflight -- --skip-ps` = perintah yang SAMA dengan yang dijalankan staff lokal,
+          # tapi melewati tes PowerShell (sudah dijaga job pester-tests + fast-smoke*). Exit 1 = ada GENTING.
+          npm run preflight -- --skip-ps
+          if ($LASTEXITCODE -ne 0) { throw "Preflight menemukan masalah GENTING (exit $LASTEXITCODE) - lihat laporan di atas." }

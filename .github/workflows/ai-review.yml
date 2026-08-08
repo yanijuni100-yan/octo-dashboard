@@ -1,0 +1,66 @@
+# .github/workflows/ai-review.yml
+# Senior AI Reviewer — auto-review PR pakai Claude
+#
+# Cara pakai:
+# 1. Tambahkan secret `ANTHROPIC_API_KEY` di GitHub repo settings.
+# 2. Pastikan file `docs/_PATTERNS.md` & `docs/architecture.md` ada (dibaca jadi context).
+# 3. Buka PR ke `main` → action otomatis jalan & posting review comment.
+
+name: Senior AI Reviewer (Otomatis)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+# Hak akses minimum (least privilege): cuma butuh read code + write comment di PR.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    name: Senior AI Reviewer
+    runs-on: ubuntu-latest
+    # Jangan jalan untuk PR dari fork (secret tidak tersedia + risiko keamanan).
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout kode PR
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0  # full history → diff base..head akurat
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (Anthropic SDK + Octokit)
+        working-directory: .github/scripts
+        # Versi DIKUNCI persis (tanpa ^) supaya pemasangan selalu sama tiap kali jalan
+        # -- update minor yang tak sengaja tidak bisa diam-diam merusak robot review.
+        run: npm install --no-audit --no-fund @anthropic-ai/sdk@0.30.0 @octokit/rest@21.0.0
+
+      - name: Ambil diff PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr diff "$PR_NUMBER" --repo "${{ github.repository }}" > /tmp/pr.diff
+          echo "Ukuran diff: $(wc -c < /tmp/pr.diff) bytes"
+
+      - name: Jalankan AI review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # (Opsional) Ganti model review tanpa ubah kode: set repo Variable REVIEW_MODEL di Settings > Variables.
+          # Kosong = pakai default Opus (claude-opus-4-8) di ai-review.cjs. Contoh isi alternatif: claude-sonnet-4-6 (lebih hemat).
+          REVIEW_MODEL: ${{ vars.REVIEW_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          DIFF_PATH: /tmp/pr.diff
+        run: node .github/scripts/ai-review.cjs
