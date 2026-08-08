@@ -44,3 +44,21 @@ local/
 *.backup-*
 *.bak
 *.bak.*
+
+# === tambahan 8 Agustus 2026 (hasil banding dengan repo rekan: lxgroup122/profilepower) ===
+# Nama-nama berkas rahasia yang UMUM dipakai. Belum dipakai aplikasi ini, dipasang
+# sebagai pagar pencegahan: kalau suatu hari dibuat, otomatis tidak ikut terkirim.
+secrets.json
+credentials.json
+config.local.json
+user-settings.json
+# profil browser (berisi cookie login = setara sudah-masuk-akun). Jangan pernah terunggah.
+chrome-profiles/
+# setelan editor, beda tiap orang di tim - bukan bagian dari program
+.vscode/
+.idea/
+# berkas sementara editor teks
+*.swp
+*.swo
+# berkas sistem Windows yang suka nyelip sendiri
+Desktop.ini
