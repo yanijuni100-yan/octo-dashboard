@@ -1,5 +1,8 @@
 # Panduan: Buat Repo GitHub & Kirim Kode (push)
 
+> Terakhir dicek ulang: **8 Agustus 2026** — semua perintah di bawah sudah dipraktekkan langsung
+> dan terbukti jalan, bukan sekadar disalin dari internet.
+
 Tujuan: kamu bisa **sendiri** menyimpan pekerjaan ke GitHub, tanpa perlu minta tolong siapa pun.
 
 > 💡 **Kenapa perlu GitHub?** Kalau laptop rusak, kena virus, atau hilang — kode yang cuma ada di
@@ -65,7 +68,7 @@ gh auth status
 
 Harus muncul `✓ Logged in to github.com account <namamu>`.
 
-### 3. Kenalkan namamu ke Git (sekali saja)
+### 3. Kenalkan namamu ke Git (sekali saja) — ⚠️ JANGAN DILEWATI
 
 Ini yang jadi tanda tangan di tiap catatan pekerjaanmu:
 
@@ -74,11 +77,68 @@ git config --global user.name "Nama Kamu"
 git config --global user.email "email-github-kamu@gmail.com"
 ```
 
+**Kalau langkah ini dilewati**, nanti `git commit` akan **gagal** dengan pesan:
+
+```
+Author identity unknown
+*** Please tell me who you are.
+```
+
+Artinya: Git menolak menyegel kardus karena **belum tahu siapa pengirimnya** — persis seperti
+kantor pos menolak paket tanpa nama pengirim. Bukan kerusakan, cuma formulir yang belum diisi.
+
+Cek apakah sudah terisi:
+
+```bash
+git config --global user.name
+git config --global user.email
+```
+
+Kalau **tidak keluar apa-apa** = belum diisi. Isi dulu dengan perintah di atas.
+
+> 🔍 **Kata `--global` itu penting.** Dengan `--global`, nama kamu berlaku di **semua** proyek
+> di komputer ini — sekali isi, selesai selamanya. Tanpa `--global`, hanya berlaku di folder
+> yang sedang kamu buka, dan kamu harus mengulanginya di tiap proyek baru.
+>
+> ⚠️ Kalau repo-mu **Public**, alamat email ini **terbaca siapa pun** di riwayat commit.
+> Tidak mau? GitHub menyediakan alamat samaran resmi berbentuk
+> `<ID>+<username>@users.noreply.github.com` — cari di
+> **GitHub → Settings → Emails → Keep my email addresses private**.
+
 ---
 
 ## C. Buat repo GitHub (sekali per proyek)
 
-Ada **2 cara**. Pilih yang kamu suka — hasilnya sama persis.
+### Langkah 0: pastikan foldermu sudah jadi "proyek git"
+
+Kalau foldermu benar-benar baru (belum pernah dipakai git), lakukan ini dulu:
+
+```bash
+git init          # pasang "buku catatan" di folder ini
+git branch -M main
+```
+
+⚠️ **Kenapa perlu `git branch -M main`?** Karena `git init` masih membuat cabang bernama
+`master`, sedangkan GitHub memakai nama `main`. Kalau namanya beda, nanti membingungkan saat
+mengirim. Perintah `-M` artinya "ganti nama cabang ini".
+
+Mau otomatis benar sejak awal di semua proyek berikutnya? Cukup sekali seumur hidup:
+
+```bash
+git config --global init.defaultBranch main
+```
+
+Cek apakah folder sudah jadi proyek git atau belum:
+
+```bash
+git status
+```
+
+Kalau keluar `fatal: not a git repository` = belum, jalankan `git init` dulu.
+
+---
+
+Setelah itu, ada **2 cara** membuat repo-nya. Pilih yang kamu suka — hasilnya sama persis.
 
 ### Cara 1: Lewat perintah (paling cepat, 1 baris) ⭐
 
@@ -192,6 +252,9 @@ gh repo view --web
 | Pesan error | Artinya | Solusinya |
 |---|---|---|
 | `fatal: not a git repository` | Folder ini belum jadi proyek git | Ketik `git init` dulu |
+| `Author identity unknown` | Git belum tahu siapa pengirimnya | Isi identitas — lihat **bagian B.3** |
+| `does not have any commits yet` | Belum ada satu pun kardus yang disegel | Wajar kalau `commit` barusan gagal; perbaiki dulu penyebabnya, lalu `commit` ulang |
+| `LF will be replaced by CRLF` | **Bukan error** — cuma beda cara Windows & Linux menandai ganti baris | Abaikan, Git merapikannya sendiri |
 | `remote origin already exists` | Sudah pernah disambungkan | Ganti alamatnya: `git remote set-url origin <alamat-baru>` |
 | `Updates were rejected` | Ada perubahan di GitHub yang belum kamu punya | Ambil dulu: `git pull --rebase`, baru `git push` lagi |
 | `Authentication failed` | Login-nya kedaluwarsa | Ulangi `gh auth login` |
@@ -276,7 +339,45 @@ gh repo view --json nameWithOwner,visibility
 git ls-remote --heads origin
 ```
 
-Hasil: <https://github.com/yanijuni100-yan/octo-dashboard> (Private, 2 cabang).
+Hasil: <https://github.com/yanijuni100-yan/octo-dashboard> — saat itu **Private**, 2 cabang
+(`main` + `feat/react-migration`).
+
+> 📌 **Perubahan sesudahnya:** repo ini kemudian **diubah jadi Public** (terbuka untuk umum)
+> setelah dibersihkan lebih dulu dari info internal. Jadi kalau kamu mengeceknya sekarang,
+> `visibility` akan terbaca `PUBLIC`, bukan `PRIVATE` seperti tertulis di perintah di atas.
+> Selalu percaya jawaban server, bukan catatan lama:
+>
+> ```bash
+> gh repo view --json nameWithOwner,visibility
+> ```
+
+### Contoh kedua: cara manual, langkah demi langkah
+
+Cara 1 di bagian C itu ringkas tapi "ajaib" — 3 pekerjaan dijadikan 1 baris. Kalau kamu mau
+melihat tiap tahapnya terpisah (lebih mudah dipahami, dan lebih mudah dicari salahnya kalau
+macet), ini urutan lengkapnya — persis yang dipakai membuat repo latihan `latihan-github`:
+
+```bash
+# 1. Pasang buku catatan di folder + samakan nama cabang
+git init
+git branch -M main
+
+# 2. Masukkan ke kardus, lalu segel + beri label
+git add .
+git commit -m "docs: mulai repo latihan"
+
+# 3. Buat gudang kosong di GitHub
+gh repo create latihan-github --private
+
+# 4. Sambungkan komputer ke gudang itu
+git remote add origin https://github.com/NAMA-AKUNMU/latihan-github.git
+
+# 5. Kirim (yang PERTAMA pakai -u, seterusnya cukup 'git push')
+git push -u origin main
+```
+
+Tanda `-u` artinya *"ingat pasangannya"* — mirip menyimpan nomor kontak. Setelah sekali diberi
+`-u`, pengiriman berikutnya cukup mengetik `git push` saja.
 
 ---
 
