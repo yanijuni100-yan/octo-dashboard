@@ -88,6 +88,6 @@ Sesi pertama tim member baru: AI auto-trigger `./.claude-kit/POST_SETUP_CHECKLIS
 
 | Versi kit | Tanggal update     | Siapa update | Catatan              |
 |-----------|--------------------|--------------|----------------------|
-| v1.61.0 | 2026-06-28 | owner  | Setup awal Pola B    |
+| v1.61.0 | 2026-06-28 | owner   | Setup awal Pola B    |
 
 <!-- Tambah baris baru tiap update isi `./.claude-kit/` ke versi lebih baru. -->

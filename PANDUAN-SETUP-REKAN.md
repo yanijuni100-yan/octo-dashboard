@@ -13,7 +13,7 @@
 Sebelum mengirim ke rekan, Anda perlu siapkan **2 hal**:
 
 ### A. ZIP folder dashboard
-1. Buka File Explorer → masuk ke folder `C:\Users\owner\octo-dashboard`
+1. Buka File Explorer → masuk ke folder `C:\Users\<nama-pengguna-Windows-Anda>\octo-dashboard`
 2. Klik kanan folder `octo-dashboard` → **Send to** → **Compressed (zipped) folder**
 3. Hasil: file **`octo-dashboard.zip`** (sekitar 500MB–1GB)
 

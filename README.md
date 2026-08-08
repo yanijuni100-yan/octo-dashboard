@@ -9,7 +9,7 @@ Klik dua kali `index.html`, atau jalankan server lokal supaya mode Live API
 berfungsi tanpa kendala:
 
 ```powershell
-cd C:\Users\owner\octo-dashboard
+cd C:\path\ke\octo-dashboard   # ganti sesuai lokasi folder di komputermu
 python -m http.server 8080
 # lalu buka http://localhost:8080
 ```

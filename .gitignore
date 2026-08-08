@@ -5,7 +5,9 @@ build/
 *.log
 .DS_Store
 Thumbs.db
-.env
+# semua varian .env (.env.local, .env.production, dst) — kecuali contoh kosong
+.env*
+!.env.example
 
 # Jangan pernah commit file sensitif.
 # CATATAN: komentar WAJIB di baris sendiri — komentar di belakang pola
@@ -19,6 +21,13 @@ adspower-import-*.csv
 # sertifikat code signing
 *.pfx
 *.p12
+# kunci privat (server, SSH, tunnel) — jangan pernah ikut terunggah
+*.pem
+*.key
+# token login ke tempat paket (npm / GitHub Packages)
+.npmrc
+# skrip & catatan operasional yang memuat data akun nyata (ID profil, dsb)
+local/
 
 
 # setelan izin Claude Code khusus komputer ini (beda tiap orang, jangan dibagikan)
