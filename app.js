@@ -18,6 +18,48 @@ function safeParse(raw, fallback) {
   catch (e) { return fallback; }
 }
 
+/* ====================================================================
+   PENYIMPANAN DATA
+   - Mode aplikasi (Electron): tersimpan sebagai FILE di drive D
+     (<folder app>/data/octo-data.json), tahan clear-cache & reinstall.
+   - Mode web (browser): tetap pakai localStorage.
+   - Migrasi otomatis: kalau file D belum ada tapi localStorage lama berisi
+     data, data lama disalin ke file D sekali jalan (akun tidak hilang).
+   ==================================================================== */
+const fileStore = (window.electronAPI && window.electronAPI.storage) || null;
+let dataFilePath = '';
+if (fileStore) { try { dataFilePath = fileStore.path() || ''; } catch (e) {} }
+
+function loadDataRaw() {
+  if (fileStore) {
+    let res = null;
+    try { res = fileStore.read(); } catch (e) { res = null; }
+    if (res && res.ok) {
+      if (res.content != null) return res.content;          // sumber utama: file di D
+      // File D belum ada → migrasi dari localStorage lama (sekali jalan)
+      const legacy = localStorage.getItem(LS.data);
+      if (legacy != null) { try { fileStore.write(legacy); } catch (e) {} return legacy; }
+      return null;
+    }
+    // Gagal baca file → jangan kehilangan data: pakai localStorage sebagai cadangan
+    return localStorage.getItem(LS.data);
+  }
+  return localStorage.getItem(LS.data);
+}
+
+function saveDataRaw(str) {
+  if (fileStore) {
+    let res = null;
+    try { res = fileStore.write(str); } catch (e) { res = null; }
+    if (res && res.ok) return true;
+    // Gagal tulis file → cadangkan ke localStorage supaya tidak hilang
+    try { localStorage.setItem(LS.data, str); } catch (e) {}
+    return false;
+  }
+  try { localStorage.setItem(LS.data, str); return true; }
+  catch (e) { return false; }
+}
+
 /* Tampilkan error tak terduga alih-alih membiarkan halaman "mati" diam-diam */
 window.addEventListener('error', e => {
   const n = document.getElementById('notice');
@@ -26,21 +68,162 @@ window.addEventListener('error', e => {
 
 /* ---------- Konfigurasi ---------- */
 let cfg = Object.assign(
-  { localUrl: 'http://localhost:58888', token: '', live: false },
+  { localUrl: 'http://localhost:58888', token: '', live: false, supaUrl: '', supaKey: '' },
   safeParse(localStorage.getItem(LS.cfg), {})
 );
 const saveCfg = () => { try { localStorage.setItem(LS.cfg, JSON.stringify(cfg)); } catch (e) {} };
+
+/* ====================================================================
+   SINKRON CLOUD (SUPABASE) — opsional. Aktif kalau URL + anon key diisi
+   DAN user sudah login. Saat login: tabel `dashboards` (1 baris JSON per
+   user) jadi sumber utama; file/localStorage lokal tetap jadi cache offline.
+   Last-write-wins berdasarkan stempel waktu `store.updatedAt`.
+   ==================================================================== */
+let supa = null;        // client supabase
+let supaUser = null;    // user yang sedang login (null = belum)
+let realtimeChan = null;
+let pushTimer = null;
+
+function initSupabase() {
+  stopRealtime();
+  supa = null; supaUser = null;
+  if (!window.supabase || !cfg.supaUrl || !cfg.supaKey) return;
+  try {
+    supa = window.supabase.createClient(cfg.supaUrl, cfg.supaKey, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    });
+  } catch (e) { supa = null; }
+}
+
+async function cloudSignIn(email, password) {
+  if (!supa) throw new Error('Isi & simpan Supabase URL + anon key dulu.');
+  const { data, error } = await supa.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  supaUser = data.user;
+  await afterLogin();
+}
+
+async function cloudSignUp(email, password) {
+  if (!supa) throw new Error('Isi & simpan Supabase URL + anon key dulu.');
+  const { data, error } = await supa.auth.signUp({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+async function cloudSignOut() {
+  if (!supa) return;
+  try { await supa.auth.signOut(); } catch (e) {}
+  supaUser = null;
+  stopRealtime();
+  updateCloudUI();
+}
+
+/* Pasang data cloud ke aplikasi (dipakai pull & realtime) */
+function applyCloudData(data, remoteIso) {
+  if (!data || !Array.isArray(data.profiles)) return false;
+  const localTs  = (store && store.updatedAt) || 0;
+  const remoteTs = remoteIso ? (Date.parse(remoteIso) || 0) : (data.updatedAt || 0);
+  if (remoteTs < localTs) return false;           // lokal lebih baru → jangan ditimpa
+  store = data;
+  if (!Array.isArray(store.profiles)) store.profiles = [];
+  saveDataRaw(JSON.stringify(store));             // perbarui cache lokal
+  profiles = store.profiles;
+  renderAll();
+  return true;
+}
+
+async function cloudPull(silent) {
+  if (!supa || !supaUser) { if (!silent) toast('Belum login Supabase.'); return; }
+  const { data, error } = await supa
+    .from('dashboards').select('data, updated_at').eq('user_id', supaUser.id).maybeSingle();
+  if (error) { if (!silent) toast('Gagal tarik cloud: ' + error.message); return; }
+  if (data && data.data) {
+    const applied = applyCloudData(data.data, data.updated_at);
+    if (!silent) toast(applied
+      ? '✓ Data ditarik dari cloud (' + store.profiles.length + ' profil)'
+      : 'Data lokal lebih baru — tidak ditimpa. Pakai "Kirim ke cloud" bila perlu.');
+  } else {
+    // Belum ada baris di cloud → dorong data lokal ke atas (sekali jalan)
+    await cloudPush(true);
+    if (!silent) toast('✓ Data lokal diunggah ke cloud.');
+  }
+}
+
+async function cloudPush(immediate) {
+  if (!supa || !supaUser) { if (immediate) toast('Belum login Supabase.'); return; }
+  if (!store.updatedAt) store.updatedAt = Date.now();
+  const payload = {
+    user_id: supaUser.id,
+    data: store,
+    updated_at: new Date(store.updatedAt).toISOString(),
+  };
+  const { error } = await supa.from('dashboards').upsert(payload, { onConflict: 'user_id' });
+  if (error && immediate) toast('Gagal kirim cloud: ' + error.message);
+}
+
+/* Dorong perubahan ke cloud secara otomatis (di-debounce) saat ada penyimpanan */
+function scheduleCloudPush() {
+  if (!supa || !supaUser) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => cloudPush(false), 1200);
+}
+
+function startRealtime() {
+  if (!supa || !supaUser) return;
+  stopRealtime();
+  realtimeChan = supa.channel('dash-' + supaUser.id)
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'dashboards', filter: 'user_id=eq.' + supaUser.id },
+      payload => {
+        const row = payload.new;
+        if (row && row.data && applyCloudData(row.data, row.updated_at)) {
+          toast('↻ Data diperbarui dari komputer lain');
+        }
+      })
+    .subscribe();
+}
+
+function stopRealtime() {
+  if (realtimeChan && supa) { try { supa.removeChannel(realtimeChan); } catch (e) {} }
+  realtimeChan = null;
+}
+
+async function afterLogin() {
+  await cloudPull(true);   // tarik diam-diam saat login/restore sesi
+  startRealtime();
+  updateCloudUI();
+}
+
+/* Pulihkan sesi yang tersimpan (login sekali, otomatis di buka berikutnya) */
+async function restoreCloudSession() {
+  if (!supa) { updateCloudUI(); return; }
+  try {
+    const { data } = await supa.auth.getSession();
+    if (data && data.session) { supaUser = data.session.user; await afterLogin(); }
+  } catch (e) {}
+  updateCloudUI();
+}
+
+function updateCloudUI() {
+  const s = document.getElementById('supaStatus');
+  if (!s) return;
+  if (!supa)            s.textContent = 'Status: koneksi Supabase belum diisi.';
+  else if (!supaUser)   s.textContent = 'Status: tersambung, belum login.';
+  else                  s.textContent = '✓ Login sebagai ' + (supaUser.email || supaUser.id) + ' — data tersinkron otomatis.';
+}
 
 /* ---------- Data dummy ---------- */
 function seedData() {
   return { profiles: [] };
 }
 
-let store = safeParse(localStorage.getItem(LS.data), null);
+let store = safeParse(loadDataRaw(), null);
 if (!store || !Array.isArray(store.profiles)) store = seedData();
 const persist = () => {
-  try { localStorage.setItem(LS.data, JSON.stringify(store)); }
-  catch (e) { toast('Penyimpanan browser penuh — perubahan terakhir tidak tersimpan.'); }
+  store.updatedAt = Date.now();
+  if (!saveDataRaw(JSON.stringify(store)))
+    toast('⚠ Gagal menyimpan data ke disk — perubahan terakhir mungkin tidak tersimpan.');
+  scheduleCloudPush();
 };
 // Bersihkan profil contoh bawaan (demo-001..demo-014); profil manual & Gmail tetap.
 store.profiles = store.profiles.filter(p => !/^demo-\d{3}$/.test(p.uuid));
@@ -1237,6 +1420,39 @@ $('#saveSettings').addEventListener('click', () => {
   cfg.token = $('#setToken').value.trim();
   saveCfg(); toast('Pengaturan disimpan');
 });
+
+/* ---------- Sinkron Cloud (Supabase) ---------- */
+$('#supaSaveCfg')?.addEventListener('click', async () => {
+  cfg.supaUrl = $('#supaUrl').value.trim();
+  cfg.supaKey = $('#supaKey').value.trim();
+  saveCfg();
+  initSupabase();
+  await restoreCloudSession();
+  toast(supa ? 'Koneksi Supabase disimpan' : 'URL/key kosong — koneksi dinonaktifkan');
+});
+$('#supaLogin')?.addEventListener('click', async () => {
+  try {
+    await cloudSignIn($('#supaEmail').value.trim(), $('#supaPass').value);
+    $('#supaPass').value = '';
+    toast('✓ Login berhasil — data tersinkron');
+  } catch (e) { toast('Login gagal: ' + (e.message || e)); }
+  updateCloudUI();
+});
+$('#supaSignup')?.addEventListener('click', async () => {
+  try {
+    await cloudSignUp($('#supaEmail').value.trim(), $('#supaPass').value);
+    toast('✓ Akun dibuat. Cek email untuk verifikasi (bila diminta), lalu Login.');
+  } catch (e) { toast('Daftar gagal: ' + (e.message || e)); }
+});
+$('#supaLogout')?.addEventListener('click', async () => {
+  await cloudSignOut();
+  toast('Sudah logout — kembali memakai data lokal');
+});
+$('#supaPull')?.addEventListener('click', () => cloudPull(false));
+$('#supaPush')?.addEventListener('click', async () => {
+  await cloudPush(true);
+  if (supa && supaUser) toast('✓ Data dikirim ke cloud');
+});
 $('#testConn').addEventListener('click', async () => {
   cfg.localUrl = $('#setLocalUrl').value.trim() || cfg.localUrl;
   const r = $('#connResult');
@@ -1350,10 +1566,20 @@ $('#importFile').addEventListener('change', async e => {
 $('#liveToggle').checked = cfg.live;
 $('#setLocalUrl').value  = cfg.localUrl;
 $('#setToken').value     = cfg.token;
+$('#supaUrl').value      = cfg.supaUrl || '';
+$('#supaKey').value      = cfg.supaKey || '';
+initSupabase();
+restoreCloudSession();   // pulihkan sesi & tarik data cloud kalau sudah pernah login
 if (IS_ELECTRON) {
   const note = document.querySelector('.iframe-note');
   if (note) note.textContent = '✓ Mode aplikasi — situs apa pun bisa tampil di sini, tanpa kena pemblokiran iframe.';
   document.title = 'Octo Dashboard (Aplikasi)';
+  const loc = document.getElementById('dataLocation');
+  if (loc && fileStore && dataFilePath) {
+    loc.innerHTML = '💾 Data tersimpan permanen di drive D:<br><code style="word-break:break-all">' +
+      esc(dataFilePath) + '</code><br><span style="opacity:.8">Backup harian otomatis ada di folder ' +
+      '<code>data\\backups</code>. Aman walau cache dibersihkan atau app di-install ulang.</span>';
+  }
 }
 
 /* Pemilih tema warna */

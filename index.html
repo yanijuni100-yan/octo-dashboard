@@ -309,6 +309,34 @@
         <p id="connResult" class="muted"></p>
       </div>
       <div class="card">
+        <div class="card-head"><h3>☁️ Sinkron Cloud (Supabase)</h3></div>
+        <p class="muted">Simpan &amp; sinkronkan data ke <strong>Supabase</strong> agar sama di semua komputer. Login sekali, lalu data tersinkron otomatis tiap ada perubahan. Tanpa login, aplikasi tetap jalan memakai data lokal. <strong>Catatan:</strong> agar beberapa komputer/orang berbagi data yang sama, login dengan akun Supabase yang <strong>sama</strong> di tiap komputer.</p>
+        <div class="field">
+          <label>Supabase Project URL</label>
+          <input type="text" id="supaUrl" class="input" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false" />
+        </div>
+        <div class="field">
+          <label>Supabase anon key (public)</label>
+          <input type="password" id="supaKey" class="input" placeholder="eyJhbGciOiJI..." />
+        </div>
+        <div class="row-btns">
+          <button class="btn" id="supaSaveCfg">Simpan koneksi</button>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0" />
+        <div class="grid-2">
+          <div class="field"><label>Email</label><input type="email" id="supaEmail" class="input" placeholder="kamu@email.com" /></div>
+          <div class="field"><label>Password</label><input type="password" id="supaPass" class="input" placeholder="password akun Supabase" /></div>
+        </div>
+        <div class="row-btns" style="flex-wrap:wrap;gap:8px">
+          <button class="btn primary" id="supaLogin">🔓 Login</button>
+          <button class="btn" id="supaSignup">+ Daftar akun</button>
+          <button class="btn" id="supaLogout">Logout</button>
+          <button class="btn" id="supaPull">⬇ Tarik dari cloud</button>
+          <button class="btn" id="supaPush">⬆ Kirim ke cloud</button>
+        </div>
+        <p class="muted" id="supaStatus" style="margin-top:12px">Status: belum tersambung.</p>
+      </div>
+      <div class="card">
         <div class="card-head"><h3>Ekspor &amp; Pindah Data</h3></div>
         <p class="muted">Untuk pindah ke laptop baru atau ke AdsPower. <strong>Catatan:</strong> file ini berisi email &amp; password — simpan di tempat aman.</p>
         <div class="row-btns" style="flex-wrap:wrap;gap:8px">
@@ -321,7 +349,7 @@
       </div>
       <div class="card">
         <div class="card-head"><h3>Data</h3></div>
-        <p class="muted">Mode dummy memakai data contoh yang tersimpan di browser Anda.</p>
+        <p class="muted" id="dataLocation">Data tersimpan di browser Anda.</p>
         <button class="btn danger" id="resetData">Reset data dummy</button>
       </div>
     </section>
@@ -391,6 +419,7 @@
 
 <div id="toast" class="toast hidden"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>
 </html>
